@@ -1,9 +1,12 @@
 // app/build.gradle.kts (App-Level)
 
 plugins {
+//    id("com.android.application")
+//    kotlin("android")
+//    kotlin("kapt") // For annotation processing with Room
     id("com.android.application")
-    kotlin("android")
-    kotlin("kapt") // For annotation processing with Room
+    id("org.jetbrains.kotlin.android")
+    id("com.google.devtools.ksp") version "1.9.10-1.0.13"
 }
 
 android {
@@ -26,11 +29,16 @@ android {
     }
 
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.7.4"
+        kotlinCompilerExtensionVersion = "1.5.3"
     }
 
     kotlinOptions {
-        jvmTarget = "1.8"
+        jvmTarget = "17"
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
     packagingOptions {
@@ -42,7 +50,7 @@ android {
 
 dependencies {
     // Kotlin Standard Library
-    implementation("org.jetbrains.kotlin:kotlin-stdlib:1.8.10")
+    implementation("org.jetbrains.kotlin:kotlin-stdlib:1.9.10")
 
     // Android Core
     implementation("androidx.core:core-ktx:1.10.1")
@@ -71,7 +79,7 @@ dependencies {
 
     // Room components
     implementation("androidx.room:room-runtime:2.5.2")
-    kapt("androidx.room:room-compiler:2.5.2")
+    ksp("androidx.room:room-compiler:2.5.2")
     implementation("androidx.room:room-ktx:2.5.2")
 
     // Google Play Services Location

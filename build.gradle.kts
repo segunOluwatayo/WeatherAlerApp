@@ -1,10 +1,3 @@
-// Top-level build file where you can add configuration options common to all sub-projects/modules.
-//plugins {
-//    alias(libs.plugins.android.application) apply false
-//    alias(libs.plugins.kotlin.android) apply false
-//    alias(libs.plugins.kotlin.compose) apply false
-//}
-// build.gradle.kts (Project-Level)
 
 buildscript {
     repositories {
@@ -14,8 +7,9 @@ buildscript {
     dependencies {
         // Android Gradle Plugin
         classpath("com.android.tools.build:gradle:8.7.0")
+        //
         // Kotlin Gradle Plugin
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.8.10")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.10")
     }
 }
 
