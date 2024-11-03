@@ -71,8 +71,8 @@ dependencies {
     androidTestImplementation(libs.junit.junit)
     debugImplementation("androidx.compose.ui:ui-tooling:1.5.1")
 
-    // Material Design
-    implementation("com.google.android.material:material:1.9.0")
+    // Material Design 3
+    implementation("androidx.compose.material3:material3:1.3.1")
 
     // Navigation Compose
     implementation("androidx.navigation:navigation-compose:2.7.0")
