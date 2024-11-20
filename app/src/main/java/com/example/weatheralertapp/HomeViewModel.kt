@@ -43,8 +43,25 @@ data class WeatherState(
     val weatherCode: Int = 1000,
     val weatherDescription: String = "",
     val locationName: String = "",
-    val country: String = ""
+    val country: String = "",
+    val localSensorData: LocalSensorData = LocalSensorData()
 )
+
+data class LocalSensorData(
+    val temperature: Float = 0f,
+    val pressure: Float = 0f,
+    val humidity: Float = 0f,
+    val pressureTrend: PressureTrend = PressureTrend.STABLE,
+    val lastUpdated: Long = 0L,
+    val isAvailable: Boolean = false,
+    val hasTemperature: Boolean = false,
+    val hasHumidity: Boolean = false,
+    val hasPressure: Boolean = false
+)
+
+enum class PressureTrend {
+    FALLING_FAST, FALLING, STABLE, RISING, RISING_FAST
+}
 
 // ViewModel for managing home screen data and functionality
 class HomeViewModel(application: Application) : AndroidViewModel(application), SensorEventListener {
@@ -70,43 +87,198 @@ class HomeViewModel(application: Application) : AndroidViewModel(application), S
     private val _savedLocations = MutableStateFlow<List<LocationState>>(emptyList())
     val savedLocations: StateFlow<List<LocationState>> = _savedLocations.asStateFlow()
 
-    // SensorManager and pressure sensor for monitoring pressure changes
     private val sensorManager: SensorManager = application.getSystemService(Context.SENSOR_SERVICE) as SensorManager
     private var pressureSensor: Sensor? = null
-    private var lastPressureReading: Float? = null
+    private var temperatureSensor: Sensor? = null
+    private var humiditySensor: Sensor? = null
+
+    // Keep track of pressure readings for trend analysis
+    private val pressureReadings = mutableListOf<PressureReading>()
+    private data class PressureReading(val value: Float, val timestamp: Long)
 
     init {
-        // Register the pressure sensor if available
-        pressureSensor = sensorManager.getDefaultSensor(Sensor.TYPE_PRESSURE)
-        pressureSensor?.let {
-            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL)
-        }
+        initializeSensors()
     }
 
+    private fun initializeSensors() {
+        pressureSensor = sensorManager.getDefaultSensor(Sensor.TYPE_PRESSURE)
+        temperatureSensor = sensorManager.getDefaultSensor(Sensor.TYPE_AMBIENT_TEMPERATURE)
+        humiditySensor = sensorManager.getDefaultSensor(Sensor.TYPE_RELATIVE_HUMIDITY)
+
+        println("HomeViewModel: Available sensors:") // Debug log
+        println("Pressure: ${pressureSensor != null}")
+        println("Temperature: ${temperatureSensor != null}")
+        println("Humidity: ${humiditySensor != null}")
+
+        // Register available sensors with a higher sampling rate
+        pressureSensor?.let {
+            val success = sensorManager.registerListener(
+                this,
+                it,
+                SensorManager.SENSOR_DELAY_UI
+            )
+            println("Pressure sensor registration: $success") // Debug log
+        }
+        temperatureSensor?.let {
+            val success = sensorManager.registerListener(
+                this,
+                it,
+                SensorManager.SENSOR_DELAY_UI
+            )
+            println("Temperature sensor registration: $success") // Debug log
+        }
+        humiditySensor?.let {
+            val success = sensorManager.registerListener(
+                this,
+                it,
+                SensorManager.SENSOR_DELAY_UI
+            )
+            println("Humidity sensor registration: $success") // Debug log
+        }
+
+        val sensorsAvailable = pressureSensor != null || temperatureSensor != null || humiditySensor != null
+        _weatherState.update { current ->
+            current.copy(
+                localSensorData = LocalSensorData(
+                    isAvailable = sensorsAvailable,
+                    pressure = current.localSensorData.pressure,
+                    temperature = current.localSensorData.temperature,
+                    humidity = current.localSensorData.humidity,
+                    pressureTrend = current.localSensorData.pressureTrend,
+                    lastUpdated = current.localSensorData.lastUpdated
+                )
+            )
+        }
+        println("HomeViewModel: Sensors available set to $sensorsAvailable") // Debug log
+
+        // Update weather state with sensor availability
+        _weatherState.update { current ->
+            current.copy(
+                localSensorData = current.localSensorData.copy(
+                    isAvailable = pressureSensor != null || temperatureSensor != null || humiditySensor != null,
+                    hasPressure = pressureSensor != null,
+                    hasTemperature = temperatureSensor != null,
+                    hasHumidity = humiditySensor != null
+                )
+            )
+        }
+    }
     override fun onCleared() {
         super.onCleared()
-        // Unregister the sensor listener when the ViewModel is cleared
         sensorManager.unregisterListener(this)
     }
 
-    // Handle sensor changes for pressure monitoring
     override fun onSensorChanged(event: SensorEvent?) {
-        event?.let {
-            if (it.sensor.type == Sensor.TYPE_PRESSURE) {
-                val currentPressure = it.values[0]
-                lastPressureReading?.let { lastPressure ->
-                    val pressureChange = currentPressure - lastPressure
-                    if (abs(pressureChange) > PRESSURE_THRESHOLD) {
-                        triggerPressureAlert(pressureChange)
-                    }
+//        event?.let {
+//            when (it.sensor.type) {
+//                Sensor.TYPE_PRESSURE -> handlePressureReading(it.values[0])
+//                Sensor.TYPE_AMBIENT_TEMPERATURE -> handleTemperatureReading(it.values[0])
+//                Sensor.TYPE_RELATIVE_HUMIDITY -> handleHumidityReading(it.values[0])
+//            }
+//        }
+        if (event != null) {
+            when (event.sensor.type) {
+                Sensor.TYPE_PRESSURE -> {
+                    println("Pressure sensor reading: ${event.values[0]}") // Debug log
+                    handlePressureReading(event.values[0])
                 }
-                lastPressureReading = currentPressure
+                Sensor.TYPE_AMBIENT_TEMPERATURE -> {
+                    println("Temperature sensor reading: ${event.values[0]}") // Debug log
+                    handleTemperatureReading(event.values[0])
+                }
+                Sensor.TYPE_RELATIVE_HUMIDITY -> {
+                    println("Humidity sensor reading: ${event.values[0]}") // Debug log
+                    handleHumidityReading(event.values[0])
+                }
             }
         }
     }
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
-        // Not used
+        // does nothing
+    }
+
+//    private fun handlePressureReading(pressure: Float) {
+//        val currentTime = System.currentTimeMillis()
+//
+//        // Add to pressure readings history
+//        pressureReadings.add(PressureReading(pressure, currentTime))
+//        if (pressureReadings.size > 12) { // Keep last hour (5-minute intervals)
+//            pressureReadings.removeAt(0)
+//        }
+//
+//        // Calculate trend and check for significant changes
+//        val trend = calculatePressureTrend()
+//        if (trend == PressureTrend.FALLING_FAST || trend == PressureTrend.RISING_FAST) {
+//            val pressureChange = if (pressureReadings.size > 1) {
+//                pressure - pressureReadings.first().value
+//            } else 0f
+//            triggerPressureAlert(pressureChange)
+//        }
+//
+//        // Update weather state
+//        _weatherState.update { current ->
+//            current.copy(
+//                localSensorData = current.localSensorData.copy(
+//                    pressure = pressure,
+//                    pressureTrend = trend,
+//                    lastUpdated = currentTime
+//                )
+//            )
+//        }
+//    }
+private fun handlePressureReading(pressure: Float) {
+    _weatherState.update { current ->
+        current.copy(
+            localSensorData = current.localSensorData.copy(
+                pressure = pressure,
+                pressureTrend = calculatePressureTrend(),
+                lastUpdated = System.currentTimeMillis(),
+                hasPressure = true,
+                isAvailable = true
+            )
+        )
+    }
+}
+
+    private fun handleTemperatureReading(temperature: Float) {
+        _weatherState.update { current ->
+            current.copy(
+                localSensorData = current.localSensorData.copy(
+                    temperature = temperature,
+                    lastUpdated = System.currentTimeMillis(),
+                    hasTemperature = true,
+                    isAvailable = true
+                )
+            )
+        }
+    }
+
+
+    private fun handleHumidityReading(humidity: Float) {
+        _weatherState.update { current ->
+            current.copy(
+                localSensorData = current.localSensorData.copy(
+                    humidity = humidity,
+                    lastUpdated = System.currentTimeMillis(),
+                    hasHumidity = true,
+                    isAvailable = true
+                )
+            )
+        }
+    }
+
+    private fun calculatePressureTrend(): PressureTrend {
+        if (pressureReadings.size < 2) return PressureTrend.STABLE
+
+        val pressureChange = pressureReadings.last().value - pressureReadings.first().value
+        return when {
+            pressureChange < -2.0f -> PressureTrend.FALLING_FAST
+            pressureChange < -0.5f -> PressureTrend.FALLING
+            pressureChange > 2.0f -> PressureTrend.RISING_FAST
+            pressureChange > 0.5f -> PressureTrend.RISING
+            else -> PressureTrend.STABLE
+        }
     }
 
     // Fetch the current location using the fused location provider
@@ -158,24 +330,51 @@ class HomeViewModel(application: Application) : AndroidViewModel(application), S
     }
 
     // Fetch weather data for the given location coordinates
+//    private fun fetchWeatherData(latitude: Double, longitude: Double) {
+//        viewModelScope.launch {
+//            try {
+//                val location = "$latitude,$longitude"
+//                val response = weatherService.getCurrentWeather(location = location)
+//
+//                // Update the weather state with API response
+//                _weatherState.value = WeatherState(
+//                    temperature = response.data.values.temperature.toInt(),
+//                    humidity = response.data.values.humidity,
+//                    windSpeed = response.data.values.windSpeed,
+//                    pressure = response.data.values.pressureSurfaceLevel,
+//                    precipitationProbability = response.data.values.precipitationProbability,
+//                    weatherCode = response.data.values.weatherCode,
+//                    weatherDescription = WeatherCodeUtil.getWeatherDescription(response.data.values.weatherCode),
+//                    locationName = _locationState.value.cityName,
+//                    country = _locationState.value.country
+//                )
+//            } catch (e: Exception) {
+//                println("Error fetching weather data: ${e.message}")
+//            }
+//        }
+//    }
     private fun fetchWeatherData(latitude: Double, longitude: Double) {
         viewModelScope.launch {
             try {
                 val location = "$latitude,$longitude"
                 val response = weatherService.getCurrentWeather(location = location)
 
-                // Update the weather state with API response
-                _weatherState.value = WeatherState(
-                    temperature = response.data.values.temperature.toInt(),
-                    humidity = response.data.values.humidity,
-                    windSpeed = response.data.values.windSpeed,
-                    pressure = response.data.values.pressureSurfaceLevel,
-                    precipitationProbability = response.data.values.precipitationProbability,
-                    weatherCode = response.data.values.weatherCode,
-                    weatherDescription = WeatherCodeUtil.getWeatherDescription(response.data.values.weatherCode),
-                    locationName = _locationState.value.cityName,
-                    country = _locationState.value.country
-                )
+                // Keep existing sensor data when updating weather state
+                _weatherState.update { current ->
+                    current.copy(
+                        temperature = response.data.values.temperature.toInt(),
+                        humidity = response.data.values.humidity,
+                        windSpeed = response.data.values.windSpeed,
+                        pressure = response.data.values.pressureSurfaceLevel,
+                        precipitationProbability = response.data.values.precipitationProbability,
+                        weatherCode = response.data.values.weatherCode,
+                        weatherDescription = WeatherCodeUtil.getWeatherDescription(response.data.values.weatherCode),
+                        locationName = _locationState.value.cityName,
+                        country = _locationState.value.country,
+                        // Preserve the existing sensor data
+                        localSensorData = current.localSensorData
+                    )
+                }
             } catch (e: Exception) {
                 println("Error fetching weather data: ${e.message}")
             }
