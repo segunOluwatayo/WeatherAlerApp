@@ -68,6 +68,9 @@ dependencies {
     implementation(libs.androidx.material3.android)
     implementation(libs.androidx.monitor)
     implementation(libs.androidx.junit.ktx)
+    implementation(libs.androidx.core)
+    implementation(libs.androidx.core)
+    implementation(libs.androidx.core)
     androidTestImplementation(libs.junit.junit)
     debugImplementation("androidx.compose.ui:ui-tooling:1.5.1")
 
@@ -89,6 +92,14 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.6.1")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.1")
 
+    //
+    implementation(libs.retrofit)
+    implementation(libs.converter.gson)
+
+    //
+    implementation ("androidx.compose.material:material-icons-extended:1.5.4")
+
     // Coroutines for Room
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+    implementation ("com.squareup.okhttp3:logging-interceptor:4.9.0")
 }
