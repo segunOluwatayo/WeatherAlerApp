@@ -33,6 +33,10 @@ import androidx.core.app.ActivityCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -146,6 +150,14 @@ fun HomeContent(
     ) {
         // Add static content as a single item
         item {
+//            Button(
+//                onClick = { viewModel.checkWorkerStatus() },
+//                modifier = Modifier
+//                    .fillMaxWidth()
+//                    .padding(vertical = 8.dp)
+//            ) {
+//                Text("Check Worker Status")
+//            }
             // Search Bar
             OutlinedTextField(
                 value = searchQuery,
@@ -233,8 +245,10 @@ fun HomeContent(
                             value = "${weatherState.pressure} hPa"
                         )
                     }
+                    LocalSensorDisplay(weatherState = weatherState)
                 }
             }
+
 
             // Share Button
             Button(
@@ -268,6 +282,135 @@ fun HomeContent(
                 viewModel.setCurrentLocation(location)
             }
         }
+    }
+}
+
+@Composable
+fun LocalSensorDisplay(weatherState: WeatherState) {
+    val sensorData = weatherState.localSensorData
+
+    if (sensorData.isAvailable) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
+            )
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp)
+            ) {
+                Text(
+                    text = "Environmental Data",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+
+                // Pressure data from sensor
+                if (sensorData.hasPressure) {
+                    Column {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("Local Pressure")
+                            Text("${sensorData.pressure.roundToInt()} hPa")
+                        }
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("Pressure Trend")
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(getPressureTrendText(sensorData.pressureTrend))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                getPressureTrendIcon(sensorData.pressureTrend)
+                            }
+                        }
+
+                        // Show pressure-based weather prediction
+                        Text(
+                            text = getPressurePrediction(sensorData.pressure, sensorData.pressureTrend),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
+                }
+
+                Divider(modifier = Modifier.padding(vertical = 8.dp))
+
+                // Last updated timestamp
+                Text(
+                    text = "Sensor Last Updated: ${
+                        if (sensorData.lastUpdated > 0)
+                            SimpleDateFormat("HH:mm:ss", Locale.getDefault())
+                                .format(Date(sensorData.lastUpdated))
+                        else
+                            "Never"
+                    }",
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun getPressureTrendIcon(trend: PressureTrend) {
+    val icon = when (trend) {
+        PressureTrend.FALLING_FAST -> Icons.Rounded.ArrowDownward
+        PressureTrend.FALLING -> Icons.Rounded.KeyboardArrowDown
+        PressureTrend.STABLE -> Icons.Rounded.Remove
+        PressureTrend.RISING -> Icons.Rounded.KeyboardArrowUp
+        PressureTrend.RISING_FAST -> Icons.Rounded.ArrowUpward
+    }
+
+    val tint = when (trend) {
+        PressureTrend.FALLING_FAST -> MaterialTheme.colorScheme.error
+        PressureTrend.FALLING -> MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
+        PressureTrend.STABLE -> MaterialTheme.colorScheme.onSurfaceVariant
+        PressureTrend.RISING -> MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
+        PressureTrend.RISING_FAST -> MaterialTheme.colorScheme.primary
+    }
+
+    Icon(
+        imageVector = icon,
+        contentDescription = "Pressure trend ${trend.name}",
+        tint = tint,
+        modifier = Modifier.size(16.dp)
+    )
+}
+
+private fun getPressureTrendText(trend: PressureTrend): String {
+    return when (trend) {
+        PressureTrend.FALLING_FAST -> "Rapidly Falling"
+        PressureTrend.FALLING -> "Falling"
+        PressureTrend.STABLE -> "Stable"
+        PressureTrend.RISING -> "Rising"
+        PressureTrend.RISING_FAST -> "Rapidly Rising"
+    }
+}
+
+private fun getPressurePrediction(pressure: Float, trend: PressureTrend): String {
+    return when {
+        pressure < 1000 && trend == PressureTrend.FALLING_FAST ->
+            "⚠️ Stormy conditions likely"
+        pressure < 1000 && trend == PressureTrend.FALLING ->
+            "Rain or unsettled weather possible"
+        pressure > 1020 && trend == PressureTrend.RISING ->
+            "Fair weather likely"
+        pressure > 1020 && trend == PressureTrend.STABLE ->
+            "Continued fair weather"
+        trend == PressureTrend.STABLE ->
+            "No significant weather changes expected"
+        else -> "Weather conditions may be changing"
     }
 }
 

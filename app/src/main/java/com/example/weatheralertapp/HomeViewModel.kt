@@ -13,8 +13,11 @@ import android.os.Build
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.work.WorkManager
+import androidx.work.await
 import com.example.weatheralertapp.com.example.weatheralertapp.*
 import com.google.android.gms.location.LocationServices
 import kotlinx.coroutines.flow.*
@@ -22,6 +25,7 @@ import kotlinx.coroutines.launch
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.*
+
 import kotlin.math.abs
 
 // Data class for representing the state of the location
@@ -179,7 +183,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application), S
         if (event != null) {
             when (event.sensor.type) {
                 Sensor.TYPE_PRESSURE -> {
-                    println("Pressure sensor reading: ${event.values[0]}") // Debug log
+//                    println("Pressure sensor reading: ${event.values[0]}") // Debug log
                     handlePressureReading(event.values[0])
                 }
                 Sensor.TYPE_AMBIENT_TEMPERATURE -> {
@@ -309,11 +313,21 @@ private fun handlePressureReading(pressure: Float) {
     private fun updateLocationState(latitude: Double, longitude: Double) {
         viewModelScope.launch {
             try {
+                // Save location for background worker
+                getApplication<Application>().getSharedPreferences("weather_prefs", Context.MODE_PRIVATE)
+                    .edit()
+                    .putFloat("last_latitude", latitude.toFloat())
+                    .putFloat("last_longitude", longitude.toFloat())
+                    .apply()
+
+                println("HomeViewModel: Saved location for background worker - lat: $latitude, lon: $longitude")
+
                 val addresses = geocoder.getFromLocation(latitude, longitude, 1)
                 val cityName = addresses?.firstOrNull()?.locality ?: ""
                 val country = addresses?.firstOrNull()?.countryName ?: ""
 
-                // Update the location state
+                println("HomeViewModel: Resolved address - City: $cityName, Country: $country")
+
                 _locationState.value = LocationState(
                     latitude = latitude,
                     longitude = longitude,
@@ -321,10 +335,10 @@ private fun handlePressureReading(pressure: Float) {
                     country = country,
                     formattedLocation = "$latitude,$longitude"
                 )
-                // Fetch weather data for the updated location
                 fetchWeatherData(latitude, longitude)
             } catch (e: Exception) {
-                println("Error updating location state: ${e.message}")
+                println("HomeViewModel: Error updating location state: ${e.message}")
+                e.printStackTrace()
             }
         }
     }
@@ -436,6 +450,29 @@ private fun handlePressureReading(pressure: Float) {
     fun setCurrentLocation(location: LocationState) {
         _locationState.value = location
         fetchWeatherData(location.latitude, location.longitude)
+    }
+
+    @SuppressLint("RestrictedApi")
+    fun checkWorkerStatus() {
+        viewModelScope.launch {
+            try {
+                val workInfos = WorkManager.getInstance(getApplication())
+                    .getWorkInfosForUniqueWork(WeatherAlertWorker.WORK_NAME)
+                    .await()
+
+                if (workInfos.isEmpty()) {
+                    println("No workers found")
+                } else {
+                    workInfos.forEach { workInfo ->
+                        println("Worker Status: ${workInfo.state}")
+                        println("Worker Tags: ${workInfo.tags}")
+                        println("Worker Run Attempt Count: ${workInfo.runAttemptCount}")
+                    }
+                }
+            } catch (e: Exception) {
+                println("Error checking worker status: ${e.message}")
+            }
+        }
     }
 
     companion object {

@@ -19,10 +19,6 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 import android.Manifest
 import com.example.weatheralertapp.com.example.weatheralertapp.GeoJsonLocation
-import kotlin.math.atan2
-import kotlin.math.cos
-import kotlin.math.sin
-import kotlin.math.sqrt
 
 class WeatherAlertWorker(
     context: Context,
@@ -44,11 +40,11 @@ class WeatherAlertWorker(
             radiusKm: Double = 50.0
         ): Boolean {
             // Print input coordinates for verification
-            println("""
-            |Checking distance:
-            |Center: ${formatCoordinate(centerLat)}°N, ${formatCoordinate(centerLon)}°E
-            |Target: ${formatCoordinate(targetLat)}°N, ${formatCoordinate(targetLon)}°E
-        """.trimMargin())
+//            println("""
+//            |Checking distance:
+//            |Center: ${formatCoordinate(centerLat)}°N, ${formatCoordinate(centerLon)}°E
+//            |Target: ${formatCoordinate(targetLat)}°N, ${formatCoordinate(targetLon)}°E
+//        """.trimMargin())
 
             val R = 6371.0 // Earth's radius in kilometers
 
@@ -71,14 +67,14 @@ class WeatherAlertWorker(
             val distance = R * c
 
             // Detailed logging with formatted numbers
-            println("""
-            |Distance Calculation Results:
-            |--------------------------------
-            |Distance: ${String.format("%.2f", distance)} km
-            |Radius limit: $radiusKm km
-            |Within range: ${distance <= radiusKm}
-            |--------------------------------
-        """.trimMargin())
+//            println("""
+//            |Distance Calculation Results:
+//            |--------------------------------
+//            |Distance: ${String.format("%.2f", distance)} km
+//            |Radius limit: $radiusKm km
+//            |Within range: ${distance <= radiusKm}
+//            |--------------------------------
+//        """.trimMargin())
 
             return distance <= radiusKm
         }
@@ -89,14 +85,14 @@ class WeatherAlertWorker(
             coordinates: List<List<List<Double>>>,
             radiusKm: Double = 50.0
         ): Boolean {
-            println("""
-            |Starting Polygon Range Check:
-            |--------------------------------
-            |Center: ${formatCoordinate(centerLat)}°N, ${formatCoordinate(centerLon)}°E
-            |Number of points: ${coordinates[0].size}
-            |Radius: $radiusKm km
-            |--------------------------------
-        """.trimMargin())
+//            println("""
+//            |Starting Polygon Range Check:
+//            |--------------------------------
+//            |Center: ${formatCoordinate(centerLat)}°N, ${formatCoordinate(centerLon)}°E
+//            |Number of points: ${coordinates[0].size}
+//            |Radius: $radiusKm km
+//            |--------------------------------
+//        """.trimMargin())
 
             // Check each vertex of the polygon
             val result = coordinates[0].any { coordinate ->
@@ -114,7 +110,7 @@ class WeatherAlertWorker(
                 )
             }
 
-            println("Polygon check complete. Result: $result")
+//            println("Polygon check complete. Result: $result")
             return result
         }
 
@@ -134,6 +130,19 @@ class WeatherAlertWorker(
     override suspend fun doWork(): Result {
         try {
             println("WeatherAlertWorker: Starting background check")
+
+            // Add retry handling
+            if (runAttemptCount > MAX_RETRY_ATTEMPTS) {
+                println("WeatherAlertWorker: Too many retry attempts")
+                return Result.failure()
+            }
+
+            // Check battery status from input data
+            val isBatteryLow = inputData.getBoolean(KEY_BATTERY_LOW, false)
+            if (isBatteryLow) {
+                println("WeatherAlertWorker: Running in battery saving mode")
+            }
+
             clearExpiredAlerts() // Clear expired alerts first
 
             val sharedPrefs = applicationContext.getSharedPreferences("weather_prefs", Context.MODE_PRIVATE)
@@ -141,10 +150,28 @@ class WeatherAlertWorker(
             val userLon = sharedPrefs.getFloat("last_longitude", 0f).toDouble()
             val radiusKm = sharedPrefs.getFloat("alert_radius_km", DEFAULT_RADIUS_KM)
 
-            val response = weatherService.getWeatherAlerts(
-                location = "$userLat,$userLon",
-                apikey = Constants.TOMORROW_API_KEY
-            )
+            // Validate location data
+            if (!isLocationValid(userLat, userLon)) {
+                println("WeatherAlertWorker: Invalid location data (${userLat}, ${userLon})")
+                return Result.retry()
+            }
+
+            // API call with error handling
+            val response = try {
+                weatherService.getWeatherAlerts(
+                    location = "$userLat,$userLon",
+                    apikey = Constants.TOMORROW_API_KEY
+                )
+            } catch (e: Exception) {
+                println("WeatherAlertWorker: API error: ${e.message}")
+                return if (isRecoverableError(e)) {
+                    println("WeatherAlertWorker: Scheduling retry for recoverable error")
+                    Result.retry()
+                } else {
+                    println("WeatherAlertWorker: Non-recoverable API error")
+                    Result.failure()
+                }
+            }
 
             println("Processing ${response.data.events.size} total events")
 
@@ -153,7 +180,7 @@ class WeatherAlertWorker(
                     val isInRange = event.eventValues.location?.let { location ->
                         when (location.type) {
                             "Polygon", "MultiPolygon" -> {
-                                println("Checking ${location.type} alert: ${event.eventValues.title}")
+//                                println("Checking ${location.type} alert: ${event.eventValues.title}")
                                 @Suppress("UNCHECKED_CAST")
                                 when (location.type) {
                                     "Polygon" -> {
@@ -172,7 +199,7 @@ class WeatherAlertWorker(
                                 }
                             }
                             "Point" -> {
-                                println("Checking point alert: ${event.eventValues.title}")
+//                                println("Checking point alert: ${event.eventValues.title}")
                                 @Suppress("UNCHECKED_CAST")
                                 val coordinates = location.coordinates as? List<Double>
                                 coordinates?.let {
@@ -196,10 +223,10 @@ class WeatherAlertWorker(
                     }
 
                     if (isInRange) {
-                        println("Alert in range: ${event.eventValues.title}")
+//                        println("Alert in range: ${event.eventValues.title}")
                         AlertItem.fromEvent(event)
                     } else {
-                        println("Alert out of range: ${event.eventValues.title}")
+//                        println("Alert out of range: ${event.eventValues.title}")
                         null
                     }
                 } catch (e: Exception) {
@@ -220,26 +247,49 @@ class WeatherAlertWorker(
                 }
             }
 
-            println("""
-                Alert Processing Results:
-                ------------------------
-                Total events received: ${response.data.events.size}
-                Alerts in range: ${alerts.size}
-                New alerts: ${newAlerts.size}
-                ------------------------
-            """.trimMargin())
+//            println("""
+//            Alert Processing Results:
+//            ------------------------
+//            Total events received: ${response.data.events.size}
+//            Alerts in range: ${alerts.size}
+//            New alerts: ${newAlerts.size}
+//            Battery saving mode: $isBatteryLow
+//            Attempt number: $runAttemptCount
+//            ------------------------
+//        """.trimMargin())
 
             if (newAlerts.isNotEmpty()) {
                 processAlerts(newAlerts)
             }
+
+            // Schedule next work based on conditions
+            scheduleNextWork(newAlerts.isNotEmpty())
 
             return Result.success()
 
         } catch (e: Exception) {
             println("WeatherAlertWorker: Critical error: ${e.message}")
             e.printStackTrace()
-            return Result.failure()
+            return if (isRecoverableError(e)) {
+                println("WeatherAlertWorker: Scheduling retry for recoverable error")
+                Result.retry()
+            } else {
+                println("WeatherAlertWorker: Non-recoverable error")
+                Result.failure()
+            }
         }
+    }
+
+    private fun isLocationValid(lat: Double, lon: Double): Boolean {
+        return lat != 0.0 && lon != 0.0 &&
+                lat >= -90 && lat <= 90 &&
+                lon >= -180 && lon <= 180
+    }
+
+    private fun isRecoverableError(error: Exception): Boolean {
+        return error is java.io.IOException ||
+                error is retrofit2.HttpException ||
+                error is java.net.SocketTimeoutException
     }
 
     private fun clearExpiredAlerts() {
@@ -304,7 +354,7 @@ class WeatherAlertWorker(
                     recordNotificationSent(alert)
                     println("WeatherAlertWorker: Successfully processed alert: ${alert.event}")
                 } else {
-                    println("WeatherAlertWorker: Skipping duplicate notification for: ${alert.event}")
+//                    println("WeatherAlertWorker: Skipping duplicate notification for: ${alert.event}")
                 }
             } catch (e: Exception) {
                 println("WeatherAlertWorker: Error sending notification: ${e.message}")
@@ -329,16 +379,25 @@ class WeatherAlertWorker(
     }
 
     private fun scheduleNextWork(alertsFound: Boolean) {
-        // Dynamic scheduling based on alert presence
-        val nextCheckMinutes = if (alertsFound) {
-            // Check more frequently if there are active alerts
-            30 // 30 minutes
+        val delay = if (alertsFound) {
+            NORMAL_INTERVAL
         } else {
-            // Check less frequently if no alerts
-            60 // 1 hour
+            BATTERY_SAVING_INTERVAL
         }
-        scheduleDelayedWork(nextCheckMinutes)
+
+        val workRequest = OneTimeWorkRequestBuilder<WeatherAlertWorker>()
+            .setInitialDelay(delay, TimeUnit.MINUTES)
+            .setConstraints(getWorkerConstraints())
+            .build()
+
+        WorkManager.getInstance(applicationContext)
+            .enqueueUniqueWork(
+                WORK_NAME,
+                ExistingWorkPolicy.REPLACE,
+                workRequest
+            )
     }
+
 
     private fun scheduleDelayedWork(delayMinutes: Int) {
         val workRequest = OneTimeWorkRequestBuilder<WeatherAlertWorker>()
@@ -362,7 +421,7 @@ class WeatherAlertWorker(
         val sharedPrefs = applicationContext.getSharedPreferences("alert_history", Context.MODE_PRIVATE)
         val alertKey = "${alert.event}_${alert.start}_${alert.end}"
         val exists = sharedPrefs.contains(alertKey)
-        println("Checking alert: $alertKey - Exists in history: $exists")
+//        println("Checking alert: $alertKey - Exists in history: $exists")
         return !exists
     }
 
@@ -396,7 +455,7 @@ class WeatherAlertWorker(
 
         // Build the notification
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_alert) // Make sure you have this icon
+            .setSmallIcon(R.drawable.ic_alert)
             .setContentTitle(alert.event)
             .setContentText(alert.description)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
@@ -445,33 +504,82 @@ class WeatherAlertWorker(
         const val WORK_NAME = "WeatherAlertCheck"
         private const val CHANNEL_ID = "weather_alerts"
         private const val DEFAULT_RADIUS_KM = 50f
+        private const val KEY_BATTERY_LOW = "key_battery_low"
+        private const val NORMAL_INTERVAL = 15L  // 15 minutes
+        private const val BATTERY_SAVING_INTERVAL = 30L // 30 minutes
+        private const val MINIMUM_WEATHER_CHECK_INTERVAL = 15L // Minimum 15 minutes
+        private const val MAX_RETRY_ATTEMPTS = 3
 
         fun startPeriodicChecks(context: Context, radiusKm: Float = DEFAULT_RADIUS_KM) {
-            // Save the alert radius preference
-            context.getSharedPreferences("weather_prefs", Context.MODE_PRIVATE)
-                .edit()
-                .putFloat("alert_radius_km", radiusKm)
-                .apply()
+            val constraints = Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .build()
 
-            val workRequest = OneTimeWorkRequestBuilder<WeatherAlertWorker>()
-                .setConstraints(
-                    Constraints.Builder()
-                        .setRequiredNetworkType(NetworkType.CONNECTED)
-                        .build()
-                )
+            val periodicWork = PeriodicWorkRequestBuilder<WeatherAlertWorker>(
+                MINIMUM_WEATHER_CHECK_INTERVAL,
+                TimeUnit.MINUTES
+            )
+                .setConstraints(constraints)
+                .setInputData(workDataOf(
+                    "radius_km" to radiusKm
+                ))
                 .build()
 
             WorkManager.getInstance(context)
-                .enqueueUniqueWork(
+                .enqueueUniquePeriodicWork(
                     WORK_NAME,
-                    ExistingWorkPolicy.REPLACE,
-                    workRequest
+                    ExistingPeriodicWorkPolicy.UPDATE,
+                    periodicWork
                 )
-        }
 
+            println("WeatherAlertWorker: Periodic checks scheduled")
+        }
 
         fun stopChecks(context: Context) {
             WorkManager.getInstance(context).cancelUniqueWork(WORK_NAME)
+            println("WeatherAlertWorker: Checks stopped")
+        }
+
+        // Add method to update check interval
+        fun updateCheckInterval(context: Context, intervalMinutes: Long) {
+            // Ensure minimum interval
+            val safeInterval = maxOf(intervalMinutes, MINIMUM_WEATHER_CHECK_INTERVAL)
+
+            val newWork = PeriodicWorkRequestBuilder<WeatherAlertWorker>(
+                safeInterval,
+                TimeUnit.MINUTES
+            )
+                .setConstraints(Constraints.Builder()
+                    .setRequiredNetworkType(NetworkType.CONNECTED)
+                    .build())
+                .build()
+
+            WorkManager.getInstance(context)
+                .enqueueUniquePeriodicWork(
+                    WORK_NAME,
+                    ExistingPeriodicWorkPolicy.REPLACE,
+                    newWork
+                )
+        }
+
+        fun startImmediateCheck(context: Context, radiusKm: Float = DEFAULT_RADIUS_KM) {
+            println("WeatherAlertWorker: [DEBUG] Scheduling immediate check")
+
+            val constraints = Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .build()
+
+            val immediateWork = OneTimeWorkRequestBuilder<WeatherAlertWorker>()
+                .setConstraints(constraints)
+                .setInputData(workDataOf(
+                    "radius_km" to radiusKm
+                ))
+                .build()
+
+            WorkManager.getInstance(context)
+                .enqueue(immediateWork)
+
+            println("WeatherAlertWorker: [DEBUG] Immediate check scheduled")
+        }
         }
     }
-}

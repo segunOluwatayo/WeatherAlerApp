@@ -71,6 +71,7 @@ dependencies {
     implementation(libs.androidx.core)
     implementation(libs.androidx.core)
     implementation(libs.androidx.core)
+    implementation(libs.androidx.core)
     androidTestImplementation(libs.junit.junit)
     debugImplementation("androidx.compose.ui:ui-tooling:1.5.1")
 
@@ -102,4 +103,9 @@ dependencies {
     // Coroutines for Room
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
     implementation ("com.squareup.okhttp3:logging-interceptor:4.9.0")
+
+    //
+    implementation ("androidx.work:work-runtime-ktx:2.8.1")
+    implementation ("androidx.startup:startup-runtime:1.1.1")
+
 }
