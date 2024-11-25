@@ -80,7 +80,7 @@ data class AlertItem(
     val end: Long,
     val description: String,
     val tags: List<String>,
-    val distance: Double? // Added to match Event structure
+    val distance: Double?,
 ) {
     companion object {
         fun fromEvent(event: Event): AlertItem {
