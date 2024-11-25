@@ -1,4 +1,5 @@
 package com.example.weatheralertapp
+
 import android.app.Application
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
@@ -7,6 +8,8 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -21,39 +24,30 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.weatheralertapp.com.example.weatheralertapp.AlertItem
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import java.util.Locale
 
-// The main screen for displaying weather alerts
 @Composable
 fun AlertsScreen() {
     val context = LocalContext.current
     val viewModel: AlertsViewModel = viewModel(
-        // Using a ViewModel factory for creating the AlertsViewModel
         factory = AlertsViewModelFactory(context.applicationContext as Application)
     )
     val uiState by viewModel.uiState.collectAsState()
 
     var searchQuery by remember { mutableStateOf("") }
 
-    // Automatically fetches the current location when the screen is first displayed
     LaunchedEffect(Unit) {
         viewModel.fetchCurrentLocation(context)
     }
 
-    // Main layout for the screen
     Column(
-        modifier = Modifier
-            .fillMaxSize()
+        modifier = Modifier.fillMaxSize()
     ) {
-        // Search and location management section at the top
         Column(
             modifier = Modifier
-                .fillMaxWidth() // Use full width
-                .padding(16.dp) // Apply padding around the content
+                .fillMaxWidth()
+                .padding(16.dp)
         ) {
-
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
@@ -61,27 +55,39 @@ fun AlertsScreen() {
                 modifier = Modifier.fillMaxWidth()
             )
 
-
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 8.dp),
+                    .padding(vertical = 16.dp),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Button(
-                    onClick = { viewModel.searchLocation(searchQuery) }
+                    onClick = { viewModel.searchLocation(searchQuery) },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    ),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.weight(1f)
                 ) {
                     Text("Search")
                 }
 
+                Spacer(modifier = Modifier.width(16.dp))
+
                 Button(
-                    onClick = { viewModel.saveCurrentLocation() }
+                    onClick = { viewModel.saveCurrentLocation() },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.tertiary,
+                        contentColor = MaterialTheme.colorScheme.onTertiary
+                    ),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.weight(1f)
                 ) {
                     Text("Save Location")
                 }
             }
 
-            // Display the current location
             Text(
                 text = "Current Location: ${uiState.currentLocation.cityName.ifEmpty {
                     "${uiState.currentLocation.latitude}, ${uiState.currentLocation.longitude}"
@@ -91,20 +97,18 @@ fun AlertsScreen() {
             )
         }
 
-        // Scrollable content section for displaying alerts and saved locations
         LazyColumn(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
                 .padding(horizontal = 16.dp)
         ) {
-            // Display saved locations if available
             if (uiState.savedLocations.isNotEmpty()) {
                 item {
                     Text(
                         text = "Saved Locations",
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(vertical = 8.dp)
+                        style = MaterialTheme.typography.headlineSmall,
+                        modifier = Modifier.padding(vertical = 16.dp)
                     )
                 }
                 items(uiState.savedLocations) { location ->
@@ -113,27 +117,27 @@ fun AlertsScreen() {
                             "${location.latitude}, ${location.longitude}"
                         },
                         modifier = Modifier
+                            .fillMaxWidth()
                             .clickable {
                                 viewModel.fetchAlertsForLocation(
                                     location.latitude,
                                     location.longitude
                                 )
                             }
-                            .padding(vertical = 4.dp)
+                            .padding(vertical = 8.dp),
+                        style = MaterialTheme.typography.bodyLarge
                     )
                 }
             }
 
-            // Display the active weather alerts section
             item {
                 Text(
                     text = "Active Weather Alerts",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(vertical = 8.dp)
+                    style = MaterialTheme.typography.headlineSmall,
+                    modifier = Modifier.padding(vertical = 16.dp)
                 )
             }
 
-            // Display different content based on the UI state
             when {
                 uiState.isLoading -> {
                     item {
@@ -149,18 +153,20 @@ fun AlertsScreen() {
                         Text(
                             text = uiState.error!!,
                             color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.padding(vertical = 8.dp)
+                            modifier = Modifier.padding(vertical = 16.dp)
                         )
                     }
                 }
                 uiState.alerts.isEmpty() -> {
-                    // Show a message if there are no alerts
                     item {
-                        Text("No active alerts for this location")
+                        Text(
+                            "No active alerts for this location",
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.padding(vertical = 16.dp)
+                        )
                     }
                 }
                 else -> {
-                    // Display the alerts
                     items(uiState.alerts) { alert ->
                         AlertCard(alert = alert)
                     }
@@ -170,7 +176,6 @@ fun AlertsScreen() {
     }
 }
 
-// A composable for displaying individual weather alerts
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun AlertCard(alert: AlertItem) {
@@ -181,6 +186,8 @@ fun AlertCard(alert: AlertItem) {
             .fillMaxWidth()
             .padding(vertical = 8.dp)
             .clickable { expanded = !expanded },
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(8.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.errorContainer
         )
@@ -197,16 +204,20 @@ fun AlertCard(alert: AlertItem) {
             ) {
                 Text(
                     text = alert.event,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.onErrorContainer,
                     modifier = Modifier.weight(1f)
                 )
 
-                IconButton(onClick = { expanded = !expanded }) {
+                IconButton(
+                    onClick = { expanded = !expanded },
+                    colors = IconButtonDefaults.iconButtonColors(
+                        contentColor = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                ) {
                     Icon(
                         imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                        contentDescription = if (expanded) "Show less" else "Show more",
-                        tint = MaterialTheme.colorScheme.onErrorContainer
+                        contentDescription = if (expanded) "Show less" else "Show more"
                     )
                 }
             }
@@ -214,14 +225,14 @@ fun AlertCard(alert: AlertItem) {
             Text(
                 text = "From: ${formatTimestamp(alert.start)}",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f)
+                color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f),
+                modifier = Modifier.padding(top = 8.dp)
             )
 
-            // Display alert tags
             if (alert.tags.isNotEmpty()) {
                 FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    modifier = Modifier.padding(top = 8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(top = 16.dp)
                 ) {
                     alert.tags.forEach { tag ->
                         AlertTag(tag = tag)
@@ -229,23 +240,22 @@ fun AlertCard(alert: AlertItem) {
                 }
             }
 
-            // Expandable content with additional details
             AnimatedVisibility(
                 visible = expanded,
                 enter = expandVertically() + fadeIn(),
                 exit = shrinkVertically() + fadeOut()
             ) {
-                Column(modifier = Modifier.padding(top = 8.dp)) {
+                Column(modifier = Modifier.padding(top = 16.dp)) {
                     Text(
-                        text = "Until: ${formatTimestamp(alert.end)}", // End time
+                        text = "Until: ${formatTimestamp(alert.end)}",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f)
                     )
 
                     if (alert.description.isNotEmpty()) {
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = alert.description, // Alert description
+                            text = alert.description,
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onErrorContainer
                         )
@@ -256,11 +266,9 @@ fun AlertCard(alert: AlertItem) {
     }
 }
 
-// A composable for displaying alert tags with specific styles
 @Composable
 private fun AlertTag(tag: String) {
     val (backgroundColor, textColor) = when (tag.lowercase(Locale.getDefault())) {
-        // Map different tag types to colors and labels
         "minor" -> MaterialTheme.colorScheme.primaryContainer to MaterialTheme.colorScheme.onPrimaryContainer
         "moderate" -> MaterialTheme.colorScheme.secondaryContainer to MaterialTheme.colorScheme.onSecondaryContainer
         "severe" -> MaterialTheme.colorScheme.errorContainer to MaterialTheme.colorScheme.onErrorContainer
@@ -285,7 +293,6 @@ private fun AlertTag(tag: String) {
     }
 }
 
-// Factory for creating the ViewModel with an Application context
 class AlertsViewModelFactory(private val application: Application) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(AlertsViewModel::class.java)) {
@@ -296,7 +303,6 @@ class AlertsViewModelFactory(private val application: Application) : ViewModelPr
     }
 }
 
-// Utility function for formatting timestamps into human-readable dates
 private fun formatTimestamp(timestamp: Long): String {
     return java.text.SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault())
         .format(java.util.Date(timestamp))
