@@ -34,6 +34,7 @@ import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
 
+// A Cache system for storing weather alerts with a defined expiration time
 class WeatherAlertCache {
     data class CacheEntry(
         val alerts: List<AlertItem>,
@@ -41,20 +42,22 @@ class WeatherAlertCache {
     )
 
     private val cache = mutableMapOf<String, CacheEntry>()
-    private val CACHE_DURATION = 30 * 60 * 1000 // 30 minutes in milliseconds
+    private val CACHE_DURATION = 30 * 60 * 1000
 
+    // This retrieve alerts for a specific location from the cache
     fun get(location: String): List<AlertItem>? {
         val entry = cache[location] ?: return null
         val isExpired = (System.currentTimeMillis() - entry.timestamp) > CACHE_DURATION
         return if (isExpired) null else entry.alerts
     }
 
+    // Store the alerts for a specific location in the cache
     fun put(location: String, alerts: List<AlertItem>) {
         cache[location] = CacheEntry(alerts, System.currentTimeMillis())
     }
 }
 
-// Create a rate limiter
+// Object to manage API rate-limiting to avoid exceeding usage limits
 object ApiRateLimiter {
     private var lastRequestTime = 0L
     private val hourlyRequests = LinkedList<Long>()
@@ -67,6 +70,7 @@ object ApiRateLimiter {
     private const val HOUR_IN_MS = 60 * 60 * 1000L
     private const val DAY_IN_MS = 24 * HOUR_IN_MS
 
+    // A check for the api limits within the allowable bounds
     @Synchronized
     fun checkRateLimit(): RateLimitStatus {
         val currentTime = System.currentTimeMillis()
@@ -87,6 +91,7 @@ object ApiRateLimiter {
         }
     }
 
+    // Record a request to update the tracking lists
     @Synchronized
     fun recordRequest() {
         val currentTime = System.currentTimeMillis()
@@ -96,6 +101,7 @@ object ApiRateLimiter {
     }
 }
 
+// Representation of the API rate limit statuses
 sealed class RateLimitStatus {
     object Allowed : RateLimitStatus()
     object ExceededPerSecond : RateLimitStatus()
@@ -103,6 +109,7 @@ sealed class RateLimitStatus {
     object ExceededPerDay : RateLimitStatus()
 }
 
+// Representation of the UI state for alerts
 data class AlertsUiState(
     val currentLocation: LocationState = LocationState(),
     val alerts: List<AlertItem> = emptyList(),
@@ -112,6 +119,7 @@ data class AlertsUiState(
 )
 
 
+// Management of weather alerts and location-related operations
 class AlertsViewModel(application: Application) : AndroidViewModel(application) {
     private val cache = WeatherAlertCache()
     private val coroutineScope = viewModelScope + Dispatchers.IO
@@ -119,6 +127,7 @@ class AlertsViewModel(application: Application) : AndroidViewModel(application) 
         level = HttpLoggingInterceptor.Level.BODY
     }
 
+    // HTTP client with logging enabled for debugging API calls
     private val httpClient = OkHttpClient.Builder()
         .addInterceptor(loggingInterceptor)
         .build()
@@ -139,6 +148,7 @@ class AlertsViewModel(application: Application) : AndroidViewModel(application) 
         createNotificationChannel()
     }
 
+    // Creation of a notification channel for weather alerts
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
@@ -155,6 +165,7 @@ class AlertsViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    // Fetch the user's current location and update the UI state
     fun fetchCurrentLocation(context: Context) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
@@ -182,6 +193,7 @@ class AlertsViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    // Update the location state with new latitude and longitude
     private fun updateLocationState(latitude: Double, longitude: Double) {
         viewModelScope.launch {
             try {
@@ -207,6 +219,7 @@ class AlertsViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    // Search for a location by its city name and update the UI state
     fun searchLocation(cityName: String) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
@@ -227,6 +240,7 @@ class AlertsViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    // Geospatial calculations, including distance checks
     object GeoUtils {
         fun isWithinRange(
             centerLat: Double,
@@ -250,13 +264,14 @@ class AlertsViewModel(application: Application) : AndroidViewModel(application) 
             return distance <= radiusKm
         }
 
+        // Check if any point in a polygon is within a given radius of a center point
         fun isPolygonInRange(
             centerLat: Double,
             centerLon: Double,
             coordinates: List<List<List<Double>>>,
             radiusKm: Double = 50.0
         ): Boolean {
-            // Check if any point of the polygon is within range
+            // Iterate through polygon coordinates to see if any are within range
             return coordinates[0].any { coordinate ->
                 val targetLon = coordinate[0]
                 val targetLat = coordinate[1]
@@ -265,7 +280,7 @@ class AlertsViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    // Add a data class for alert deduplication
+    // Added a data class for alert deduplication
     data class AlertKey(
         val title: String,
         val startTime: String,
@@ -290,7 +305,7 @@ class AlertsViewModel(application: Application) : AndroidViewModel(application) 
                             apikey = Constants.TOMORROW_API_KEY
                         )
 
-                        // Use a Set to track unique alerts
+                        //Set to track unique alerts
                         val uniqueAlerts = mutableSetOf<AlertKey>()
 
                         val alertsList = response.data.events
@@ -400,6 +415,8 @@ class AlertsViewModel(application: Application) : AndroidViewModel(application) 
             System.currentTimeMillis()
         }
     }
+
+    // Save the current location to the list of saved locations
     fun saveCurrentLocation() {
         val currentLocation = _uiState.value.currentLocation
         if (currentLocation.latitude != 0.0 && currentLocation.longitude != 0.0) {

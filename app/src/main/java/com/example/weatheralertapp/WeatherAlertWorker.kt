@@ -20,6 +20,7 @@ import java.util.concurrent.TimeUnit
 import android.Manifest
 import com.example.weatheralertapp.com.example.weatheralertapp.GeoJsonLocation
 
+// A class for performing background tasks to fetch and notify weather alerts
 class WeatherAlertWorker(
     context: Context,
     workerParams: WorkerParameters
@@ -31,6 +32,7 @@ class WeatherAlertWorker(
         .build()
         .create(WeatherService::class.java)
 
+    // Functions for geospatial calculations
     object GeoUtils {
         fun isWithinRange(
             centerLat: Double,
@@ -79,6 +81,7 @@ class WeatherAlertWorker(
             return distance <= radiusKm
         }
 
+        // Check if any point in a polygon is within a specified radius of a central location
         fun isPolygonInRange(
             centerLat: Double,
             centerLon: Double,
@@ -114,6 +117,7 @@ class WeatherAlertWorker(
             return result
         }
 
+        // Data class to uniquely identify alerts
         data class AlertKey(
             val title: String,
             val startTime: String,
@@ -127,6 +131,7 @@ class WeatherAlertWorker(
         }
     }
 
+    // Primary function executed by the Worker
     override suspend fun doWork(): Result {
         try {
             println("WeatherAlertWorker: Starting background check")
@@ -280,6 +285,7 @@ class WeatherAlertWorker(
         }
     }
 
+    // Validation check if the location is within acceptable bounds
     private fun isLocationValid(lat: Double, lon: Double): Boolean {
         return lat != 0.0 && lon != 0.0 &&
                 lat >= -90 && lat <= 90 &&
@@ -341,6 +347,7 @@ class WeatherAlertWorker(
     }
 
 
+    // Process and send notifications for new alerts
     private fun processAlerts(alerts: List<AlertItem>) {
         val maxNotifications = 20 // Keep below system limit of 25
 
@@ -434,6 +441,7 @@ class WeatherAlertWorker(
         println("Saved new alert to history: $alertKey")
     }
 
+    // Send a notification for a specific alert
     private fun sendNotification(context: Context, alert: AlertItem) {
         val notificationManager = NotificationManagerCompat.from(context)
 

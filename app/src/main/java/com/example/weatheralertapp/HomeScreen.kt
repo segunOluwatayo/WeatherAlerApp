@@ -41,6 +41,9 @@ import java.util.Date
 import java.util.Locale
 import kotlin.math.roundToInt
 
+
+// Main composable screen for the weather application.
+// Handles location permissions, weather display, and user interactions.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen() {
@@ -49,6 +52,7 @@ fun HomeScreen() {
         factory = HomeViewModelFactory(context.applicationContext as Application)
     )
 
+    // Track permission state
     var permissionsGranted by remember { mutableStateOf(false) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -60,6 +64,7 @@ fun HomeScreen() {
         }
     }
 
+    // A Check for existing permission status
     val hasFineLocationPermission = ActivityCompat.checkSelfPermission(
         context,
         Manifest.permission.ACCESS_FINE_LOCATION
@@ -70,6 +75,7 @@ fun HomeScreen() {
         Manifest.permission.ACCESS_COARSE_LOCATION
     ) == PackageManager.PERMISSION_GRANTED
 
+    // A request permissions on launch if not already granted
     LaunchedEffect(Unit) {
         if (hasFineLocationPermission && hasCoarseLocationPermission) {
             permissionsGranted = true
@@ -128,10 +134,15 @@ fun HomeScreen() {
     )
 }
 
+ // Main weather content wrapper composable.
+// Delegates to HomeContent with required context and modifiers.
 @Composable
 fun WeatherContent(viewModel: HomeViewModel, modifier: Modifier = Modifier) {
     HomeContent(viewModel, LocalContext.current, modifier)
 }
+
+// Primary content composable for the home screen.
+// Displays weather information, search functionality, and saved locations.
 
 @Composable
 fun HomeContent(
@@ -201,6 +212,7 @@ fun HomeContent(
                     }
                 }
 
+                // Current weather display card
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -313,6 +325,7 @@ fun HomeContent(
     }
 }
 
+//Displays environmental sensor data if available on the device.
 @Composable
 fun LocalSensorDisplay(weatherState: WeatherState) {
     val sensorData = weatherState.localSensorData
@@ -328,6 +341,7 @@ fun LocalSensorDisplay(weatherState: WeatherState) {
                 containerColor = MaterialTheme.colorScheme.surfaceVariant
             )
         ) {
+            // Sensor data content
             Column(
                 modifier = Modifier.padding(16.dp)
             ) {
@@ -363,6 +377,7 @@ fun LocalSensorDisplay(weatherState: WeatherState) {
                             }
                         }
 
+                        // Weather prediction based on pressure
                         Text(
                             text = getPressurePrediction(sensorData.pressure, sensorData.pressureTrend),
                             style = MaterialTheme.typography.bodySmall,
@@ -393,6 +408,7 @@ fun LocalSensorDisplay(weatherState: WeatherState) {
     }
 }
 
+// Returns the icon for pressure trend visualization.
 @Composable
 private fun getPressureTrendIcon(trend: PressureTrend) {
     val icon = when (trend) {
@@ -419,6 +435,7 @@ private fun getPressureTrendIcon(trend: PressureTrend) {
     )
 }
 
+// Converts pressure trend to human-readable text.
 private fun getPressureTrendText(trend: PressureTrend): String {
     return when (trend) {
         PressureTrend.FALLING_FAST -> "Rapidly Falling"
@@ -427,6 +444,8 @@ private fun getPressureTrendText(trend: PressureTrend): String {
         PressureTrend.RISING -> "Rising"
         PressureTrend.RISING_FAST -> "Rapidly Rising"}
 }
+
+// Provides weather prediction based on pressure and trend.
 
 private fun getPressurePrediction(pressure: Float, trend: PressureTrend): String {
     return when {
@@ -444,6 +463,8 @@ private fun getPressurePrediction(pressure: Float, trend: PressureTrend): String
     }
 }
 
+// Reusable composable for displaying weather detail items.
+// like for showing humidity, wind speed, and pressure information.
 @Composable
 fun WeatherDetailItem(icon: ImageVector, label: String, value: String) {
     Column(
@@ -469,6 +490,7 @@ fun WeatherDetailItem(icon: ImageVector, label: String, value: String) {
     }
 }
 
+// Displays a saved location item with click handling.
 @Composable
 fun SavedLocationItem(location: LocationState, onClick: () -> Unit) {
     Card(
@@ -501,6 +523,8 @@ fun SavedLocationItem(location: LocationState, onClick: () -> Unit) {
     }
 }
 
+//Content displayed when permissions are required.
+// Shows different UI based on whether permissions are denied or need to be requested.
 @Composable
 fun PermissionRequiredContent(
     isPermissionDenied: Boolean,
@@ -514,6 +538,7 @@ fun PermissionRequiredContent(
     }
 }
 
+// Display rationale for requesting location permission.
 @Composable
 fun PermissionRationale(onRequestPermission: () -> Unit) {
     Column(
@@ -542,6 +567,7 @@ fun PermissionRationale(onRequestPermission: () -> Unit) {
     }
 }
 
+// Display UI when permissions are permanently denied.
 @Composable
 fun PermissionDenied(onOpenSettings: () -> Unit) {
     Column(
@@ -570,6 +596,7 @@ fun PermissionDenied(onOpenSettings: () -> Unit) {
     }
 }
 
+// Shares current weather information using system share intent.
 @SuppressLint("QueryPermissionsNeeded")
 fun shareWeatherInfo(
     context: Context,
@@ -608,6 +635,7 @@ fun shareWeatherInfo(
     }
 }
 
+// Maps weather codes to corresponding drawable resources.
 @DrawableRes
 fun getWeatherIcon(weatherCode: Int): Int {
     return when (weatherCode) {
@@ -622,6 +650,7 @@ fun getWeatherIcon(weatherCode: Int): Int {
     }
 }
 
+// Factory for creating HomeViewModel instances with application context.
 class HomeViewModelFactory(private val application: Application) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {

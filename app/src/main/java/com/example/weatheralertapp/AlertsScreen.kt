@@ -26,6 +26,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.weatheralertapp.com.example.weatheralertapp.AlertItem
 import java.util.Locale
 
+
+// Main composable screen for displaying weather alerts and locations.
+// Manages the display of current location, saved locations, and active weather alerts.
 @Composable
 fun AlertsScreen() {
     val context = LocalContext.current
@@ -36,6 +39,7 @@ fun AlertsScreen() {
 
     var searchQuery by remember { mutableStateOf("") }
 
+    // Fetch current location when the screen is first launched
     LaunchedEffect(Unit) {
         viewModel.fetchCurrentLocation(context)
     }
@@ -43,6 +47,8 @@ fun AlertsScreen() {
     Column(
         modifier = Modifier.fillMaxSize()
     ) {
+
+        // Search and location controls section
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -88,6 +94,7 @@ fun AlertsScreen() {
                 }
             }
 
+            // Display current location
             Text(
                 text = "Current Location: ${uiState.currentLocation.cityName.ifEmpty {
                     "${uiState.currentLocation.latitude}, ${uiState.currentLocation.longitude}"
@@ -97,6 +104,7 @@ fun AlertsScreen() {
             )
         }
 
+        // Scrollable content section containing saved locations and alerts
         LazyColumn(
             modifier = Modifier
                 .fillMaxWidth()
@@ -130,6 +138,7 @@ fun AlertsScreen() {
                 }
             }
 
+            // Weather alerts section header
             item {
                 Text(
                     text = "Active Weather Alerts",
@@ -138,6 +147,7 @@ fun AlertsScreen() {
                 )
             }
 
+            // Display appropriate content based on state
             when {
                 uiState.isLoading -> {
                     item {
@@ -176,6 +186,8 @@ fun AlertsScreen() {
     }
 }
 
+// Composable for displaying individual weather alert cards.
+// Supports expansion/collapse for showing additional details.
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun AlertCard(alert: AlertItem) {
@@ -197,6 +209,7 @@ fun AlertCard(alert: AlertItem) {
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
+            // Alert header with expand/collapse control
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -222,6 +235,7 @@ fun AlertCard(alert: AlertItem) {
                 }
             }
 
+            // Alert start time
             Text(
                 text = "From: ${formatTimestamp(alert.start)}",
                 style = MaterialTheme.typography.bodyMedium,
@@ -229,6 +243,7 @@ fun AlertCard(alert: AlertItem) {
                 modifier = Modifier.padding(top = 8.dp)
             )
 
+            // Display alert tags if present
             if (alert.tags.isNotEmpty()) {
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -266,6 +281,7 @@ fun AlertCard(alert: AlertItem) {
     }
 }
 
+// Composable for displaying alert tags with appropriate styling based on severity.
 @Composable
 private fun AlertTag(tag: String) {
     val (backgroundColor, textColor) = when (tag.lowercase(Locale.getDefault())) {
@@ -293,6 +309,9 @@ private fun AlertTag(tag: String) {
     }
 }
 
+
+// Factory for creating AlertsViewModel instances with the application context.
+
 class AlertsViewModelFactory(private val application: Application) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(AlertsViewModel::class.java)) {
@@ -303,6 +322,7 @@ class AlertsViewModelFactory(private val application: Application) : ViewModelPr
     }
 }
 
+// Formats a timestamp into a human-readable date and time string.
 private fun formatTimestamp(timestamp: Long): String {
     return java.text.SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault())
         .format(java.util.Date(timestamp))
