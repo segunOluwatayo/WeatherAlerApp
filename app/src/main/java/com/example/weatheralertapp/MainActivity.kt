@@ -13,31 +13,31 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.example.weatheralertapp.ui.theme.WeatherAlertAppTheme
+import androidx.lifecycle.viewmodel.compose.viewModel
 import java.util.Locale
 
-// The MainActivity class which serves as the entry point for the app
 class MainActivity : ComponentActivity() {
+//    private fun handleThemeChange() {
+//        // This will recreate the activity smoothly
+//        recreate()
+//    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Initialize the weather alert worker
         println("MainActivity: Starting weather alert worker")
         WeatherAlertWorker.startImmediateCheck(this)
         WeatherAlertWorker.startPeriodicChecks(this)
 
-        // The set content id setting the content view with the custom theme and navigation setup
         setContent {
-            WeatherAlertAppTheme {
-                // The controller for navigation
+            val settingsViewModel: SettingsViewModel = viewModel()
+            AppTheme(viewModel = settingsViewModel) {
                 val navController = rememberNavController()
                 Scaffold(
                     bottomBar = {
-                        // A set up for bottom navigation bar to show the 3 layouts of home, alerts and settings
                         BottomNavigationBar(navController = navController)
                     }
                 ) { innerPadding ->
-                    // Passes the navController and padding to the navigation graph
                     NavigationGraph(
                         navController = navController,
                         modifier = Modifier.padding(innerPadding)
@@ -47,30 +47,24 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-
-    // Composable function for setting up the Bottom Navigation Bar
     @Composable
     fun BottomNavigationBar(navController: NavHostController) {
-        // List of options available in the navigation bar
         val items = listOf(
             Screen.Home,
             Screen.Alerts,
             Screen.Settings
         )
         NavigationBar {
-            // Retrieval of the current route
             val currentRoute = currentRoute(navController)
 
-            // Loops through each options in items and create a navigation bar item for each
             items.forEach { screen ->
                 NavigationBarItem(
                     icon = {
-                        // Set the icon for each item NB: (this currently uses the same icon for all for milestone 1)
                         Icon(
                             imageVector = Icons.Default.Home,
                             contentDescription = screen.route
                         )
-                    }, // Note to self: I have to replace with the right icons for milestone 2
+                    },
                     label = {
                         Text(screen.route.replaceFirstChar {
                             if (it.isLowerCase()) it.titlecase(
@@ -81,13 +75,10 @@ class MainActivity : ComponentActivity() {
                     selected = currentRoute == screen.route,
                     onClick = {
                         navController.navigate(screen.route) {
-                            // Pop up to the start destination of the graph
                             popUpTo(navController.graph.startDestinationId) {
                                 saveState = true
                             }
-                            // Avoid duplicate navigation to the same destination
                             launchSingleTop = true
-                            // Restore state when reselecting a previously selected item
                             restoreState = true
                         }
                     }
@@ -96,7 +87,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // A helper function to get the current route in the navigation stack
     @Composable
     fun currentRoute(navController: NavHostController): String? {
         val navBackStackEntry by navController.currentBackStackEntryAsState()
