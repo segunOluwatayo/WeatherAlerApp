@@ -26,6 +26,7 @@ class WeatherAlertWorker(
     workerParams: WorkerParameters
 ) : CoroutineWorker(context, workerParams) {
 
+    private val alertProcessor = WeatherAlertProcessor(context)
     private val weatherService = Retrofit.Builder()
         .baseUrl(Constants.TOMORROW_BASE_URL)
         .addConverterFactory(GsonConverterFactory.create())
@@ -180,7 +181,13 @@ class WeatherAlertWorker(
 
             println("Processing ${response.data.events.size} total events")
 
-            val alerts = response.data.events.mapNotNull { event ->
+            val alerts = response.data.events
+                .filter { event ->
+                    // First check if the alert should be processed based on user preferences
+                    alertProcessor.shouldProcessAlert(event)
+                }
+
+                                .mapNotNull { event ->
                 try {
                     val isInRange = event.eventValues.location?.let { location ->
                         when (location.type) {
@@ -584,8 +591,18 @@ class WeatherAlertWorker(
                 ))
                 .build()
 
+            val workRequest = OneTimeWorkRequestBuilder<WeatherAlertWorker>()
+                .setConstraints(Constraints.Builder()
+                    .setRequiredNetworkType(NetworkType.CONNECTED)
+                    .build())
+                .build()
+
             WorkManager.getInstance(context)
-                .enqueue(immediateWork)
+                .enqueueUniqueWork(
+                    WORK_NAME,
+                    ExistingWorkPolicy.REPLACE,
+                    workRequest
+                )
 
             println("WeatherAlertWorker: [DEBUG] Immediate check scheduled")
         }
