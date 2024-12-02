@@ -127,6 +127,10 @@ class AlertsViewModel(application: Application) : AndroidViewModel(application) 
         level = HttpLoggingInterceptor.Level.BODY
     }
 
+    // Added a MutableStateFlow for refresh state
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+
     // HTTP client with logging enabled for debugging API calls
     private val httpClient = OkHttpClient.Builder()
         .addInterceptor(loggingInterceptor)
@@ -162,6 +166,23 @@ class AlertsViewModel(application: Application) : AndroidViewModel(application) 
                 NotificationManager::class.java
             )
             notificationManager.createNotificationChannel(channel)
+        }
+    }
+
+    // Trigger a refresh of weather alerts for the current location
+    fun refreshAlerts(context: Context) {
+        viewModelScope.launch {
+            _isRefreshing.value = true
+            try {
+                val currentLocation = _uiState.value.currentLocation
+                if (currentLocation.latitude != 0.0 && currentLocation.longitude != 0.0) {
+                    fetchAlertsForLocation(currentLocation.latitude, currentLocation.longitude)
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = "Error refreshing alerts: ${e.message}") }
+            } finally {
+                _isRefreshing.value = false
+            }
         }
     }
 

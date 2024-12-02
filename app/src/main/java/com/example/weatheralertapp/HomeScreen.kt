@@ -38,6 +38,8 @@ import androidx.core.app.ActivityCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.google.accompanist.swiperefresh.SwipeRefresh
+import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -66,7 +68,7 @@ fun HomeScreen() {
         }
     }
 
-    // A Check for existing permission status
+    // Check existing permission status
     val hasFineLocationPermission = ActivityCompat.checkSelfPermission(
         context,
         Manifest.permission.ACCESS_FINE_LOCATION
@@ -77,7 +79,7 @@ fun HomeScreen() {
         Manifest.permission.ACCESS_COARSE_LOCATION
     ) == PackageManager.PERMISSION_GRANTED
 
-    // A request permissions on launch if not already granted
+    // Request permissions on launch if not already granted
     LaunchedEffect(Unit) {
         if (hasFineLocationPermission && hasCoarseLocationPermission) {
             permissionsGranted = true
@@ -110,7 +112,18 @@ fun HomeScreen() {
         },
         content = { padding ->
             if (permissionsGranted) {
-                WeatherContent(viewModel, Modifier.padding(padding))
+                // Implement SwipeRefresh
+                val isRefreshing by viewModel.isRefreshing.collectAsState()
+
+                SwipeRefresh(
+                    state = rememberSwipeRefreshState(isRefreshing),
+                    onRefresh = { viewModel.refreshData(context) },
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding)
+                ) {
+                    WeatherContent(viewModel, Modifier.fillMaxSize())
+                }
             } else {
                 PermissionRequiredContent(
                     isPermissionDenied = !hasFineLocationPermission && !hasCoarseLocationPermission,

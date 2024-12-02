@@ -72,6 +72,10 @@ class HomeViewModel(application: Application) : AndroidViewModel(application), S
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
+    // Added a MutableStateFlow for refresh state
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+
     // Retrofit instance for API calls
     private val retrofit = Retrofit.Builder()
         .baseUrl(Constants.TOMORROW_BASE_URL)
@@ -488,6 +492,21 @@ private fun handlePressureReading(pressure: Float) {
                 }
             } catch (e: Exception) {
                 println("Error checking worker status: ${e.message}")
+            }
+        }
+    }
+    // Functions to set the refresh state
+    fun refreshData(context: Context) {
+        viewModelScope.launch {
+            _isRefreshing.value = true
+            try {
+                // Fetch the latest location and weather data
+                fetchLocation(context)
+            } catch (e: Exception) {
+                // Handle any errors if necessary
+                println("Error refreshing data: ${e.message}")
+            } finally {
+                _isRefreshing.value = false
             }
         }
     }

@@ -108,4 +108,7 @@ dependencies {
     implementation ("androidx.work:work-runtime-ktx:2.8.1")
     implementation ("androidx.startup:startup-runtime:1.1.1")
 
+    // Accompanist SwipeRefresh
+    implementation ("com.google.accompanist:accompanist-swiperefresh:0.30.1")
+
 }

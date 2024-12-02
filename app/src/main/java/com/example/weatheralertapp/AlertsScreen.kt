@@ -24,6 +24,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.weatheralertapp.com.example.weatheralertapp.AlertItem
+import com.google.accompanist.swiperefresh.SwipeRefresh
+import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 import java.util.Locale
 
 
@@ -44,141 +46,150 @@ fun AlertsScreen() {
         viewModel.fetchCurrentLocation(context)
     }
 
-    Column(
+    // Implement SwipeRefresh
+    val isRefreshing by viewModel.isRefreshing.collectAsState()
+
+    SwipeRefresh(
+        state = rememberSwipeRefreshState(isRefreshing),
+        onRefresh = { viewModel.refreshAlerts(context) },
         modifier = Modifier.fillMaxSize()
     ) {
-
-        // Search and location controls section
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
+            modifier = Modifier.fillMaxSize()
         ) {
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
-                label = { Text("Search Location") },
-                modifier = Modifier.fillMaxWidth()
-            )
 
-            Row(
+            // Search and location controls section
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween
+                    .padding(16.dp)
             ) {
-                Button(
-                    onClick = { viewModel.searchLocation(searchQuery) },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary
-                    ),
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.weight(1f)
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    label = { Text("Search Location") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text("Search")
+                    Button(
+                        onClick = { viewModel.searchLocation(searchQuery) },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
+                        ),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Search")
+                    }
+
+                    Spacer(modifier = Modifier.width(16.dp))
+
+                    Button(
+                        onClick = { viewModel.saveCurrentLocation() },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.tertiary,
+                            contentColor = MaterialTheme.colorScheme.onTertiary
+                        ),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Save Location")
+                    }
                 }
 
-                Spacer(modifier = Modifier.width(16.dp))
-
-                Button(
-                    onClick = { viewModel.saveCurrentLocation() },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.tertiary,
-                        contentColor = MaterialTheme.colorScheme.onTertiary
-                    ),
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text("Save Location")
-                }
+                // Display current location
+                Text(
+                    text = "Current Location: ${uiState.currentLocation.cityName.ifEmpty {
+                        "${uiState.currentLocation.latitude}, ${uiState.currentLocation.longitude}"
+                    }}",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
             }
 
-            // Display current location
-            Text(
-                text = "Current Location: ${uiState.currentLocation.cityName.ifEmpty {
-                    "${uiState.currentLocation.latitude}, ${uiState.currentLocation.longitude}"
-                }}",
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(vertical = 8.dp)
-            )
-        }
+            // Scrollable content section containing saved locations and alerts
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .padding(horizontal = 16.dp)
+            ) {
+                if (uiState.savedLocations.isNotEmpty()) {
+                    item {
+                        Text(
+                            text = "Saved Locations",
+                            style = MaterialTheme.typography.headlineSmall,
+                            modifier = Modifier.padding(vertical = 16.dp)
+                        )
+                    }
+                    items(uiState.savedLocations) { location ->
+                        Text(
+                            text = location.cityName.ifEmpty {
+                                "${location.latitude}, ${location.longitude}"
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    viewModel.fetchAlertsForLocation(
+                                        location.latitude,
+                                        location.longitude
+                                    )
+                                }
+                                .padding(vertical = 8.dp),
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                    }
+                }
 
-        // Scrollable content section containing saved locations and alerts
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-                .padding(horizontal = 16.dp)
-        ) {
-            if (uiState.savedLocations.isNotEmpty()) {
+                // Weather alerts section header
                 item {
                     Text(
-                        text = "Saved Locations",
+                        text = "Active Weather Alerts",
                         style = MaterialTheme.typography.headlineSmall,
                         modifier = Modifier.padding(vertical = 16.dp)
                     )
                 }
-                items(uiState.savedLocations) { location ->
-                    Text(
-                        text = location.cityName.ifEmpty {
-                            "${location.latitude}, ${location.longitude}"
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                viewModel.fetchAlertsForLocation(
-                                    location.latitude,
-                                    location.longitude
-                                )
-                            }
-                            .padding(vertical = 8.dp),
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                }
-            }
 
-            // Weather alerts section header
-            item {
-                Text(
-                    text = "Active Weather Alerts",
-                    style = MaterialTheme.typography.headlineSmall,
-                    modifier = Modifier.padding(vertical = 16.dp)
-                )
-            }
-
-            // Display appropriate content based on state
-            when {
-                uiState.isLoading -> {
-                    item {
-                        CircularProgressIndicator(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .wrapContentSize(Alignment.Center)
-                        )
+                // Display appropriate content based on state
+                when {
+                    uiState.isLoading -> {
+                        item {
+                            CircularProgressIndicator(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .wrapContentSize(Alignment.Center)
+                            )
+                        }
                     }
-                }
-                uiState.error != null -> {
-                    item {
-                        Text(
-                            text = uiState.error!!,
-                            color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.padding(vertical = 16.dp)
-                        )
+                    uiState.error != null -> {
+                        item {
+                            Text(
+                                text = uiState.error!!,
+                                color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.padding(vertical = 16.dp)
+                            )
+                        }
                     }
-                }
-                uiState.alerts.isEmpty() -> {
-                    item {
-                        Text(
-                            "No active alerts for this location",
-                            style = MaterialTheme.typography.bodyLarge,
-                            modifier = Modifier.padding(vertical = 16.dp)
-                        )
+                    uiState.alerts.isEmpty() -> {
+                        item {
+                            Text(
+                                "No active alerts for this location",
+                                style = MaterialTheme.typography.bodyLarge,
+                                modifier = Modifier.padding(vertical = 16.dp)
+                            )
+                        }
                     }
-                }
-                else -> {
-                    items(uiState.alerts) { alert ->
-                        AlertCard(alert = alert)
+                    else -> {
+                        items(uiState.alerts) { alert ->
+                            AlertCard(alert = alert)
+                        }
                     }
                 }
             }
