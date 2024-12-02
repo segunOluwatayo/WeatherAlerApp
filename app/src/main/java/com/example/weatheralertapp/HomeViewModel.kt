@@ -13,20 +13,19 @@ import android.os.Build
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.work.WorkManager
 import androidx.work.await
-import com.example.weatheralertapp.com.example.weatheralertapp.*
 import com.google.android.gms.location.LocationServices
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.*
+import com.example.weatheralertapp.com.example.weatheralertapp.WeatherCodeUtil
+import com.example.weatheralertapp.com.example.weatheralertapp.WeatherService
 
-import kotlin.math.abs
 
 // Data class for representing the state of the location
 data class LocationState(
@@ -69,6 +68,9 @@ enum class PressureTrend {
 
 // ViewModel for managing home screen data and functionality
 class HomeViewModel(application: Application) : AndroidViewModel(application), SensorEventListener {
+
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
     // Retrofit instance for API calls
     private val retrofit = Retrofit.Builder()
@@ -323,8 +325,20 @@ private fun handlePressureReading(pressure: Float) {
                 println("HomeViewModel: Saved location for background worker - lat: $latitude, lon: $longitude")
 
                 val addresses = geocoder.getFromLocation(latitude, longitude, 1)
-                val cityName = addresses?.firstOrNull()?.locality ?: ""
-                val country = addresses?.firstOrNull()?.countryName ?: ""
+                val address = addresses?.firstOrNull()
+
+                // Enhanced city name resolution
+                val cityName = address?.let { addr ->
+                    when {
+                        // Try to get the most specific name without "County" prefix
+                        !addr.locality.isNullOrBlank() -> addr.locality
+                        !addr.subAdminArea.isNullOrBlank() -> addr.subAdminArea.removePrefix("County ").trim()
+                        !addr.adminArea.isNullOrBlank() -> addr.adminArea.removePrefix("County ").trim()
+                        else -> "Unknown Location"
+                    }
+                } ?: "Unknown Location"
+
+                val country = address?.countryName ?: "Unknown Country"
 
                 println("HomeViewModel: Resolved address - City: $cityName, Country: $country")
 
@@ -399,12 +413,15 @@ private fun handlePressureReading(pressure: Float) {
     fun searchLocation(cityName: String) {
         viewModelScope.launch {
             try {
+                _isLoading.value = true
                 val addresses = geocoder.getFromLocationName(cityName, 1)
                 addresses?.firstOrNull()?.let { address ->
                     updateLocationState(address.latitude, address.longitude)
                 }
             } catch (e: Exception) {
                 println("Error searching location: ${e.message}")
+            }  finally {
+                _isLoading.value = false
             }
         }
     }

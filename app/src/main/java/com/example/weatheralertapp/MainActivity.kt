@@ -40,6 +40,7 @@ class MainActivity : ComponentActivity() {
                 ) { innerPadding ->
                     NavigationGraph(
                         navController = navController,
+                        settingsViewModel = settingsViewModel,
                         modifier = Modifier.padding(innerPadding)
                     )
                 }
@@ -47,7 +48,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    @Composable
+        @Composable
     fun BottomNavigationBar(navController: NavHostController) {
         val items = listOf(
             Screen.Home,

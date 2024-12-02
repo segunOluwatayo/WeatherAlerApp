@@ -12,13 +12,13 @@ import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.work.*
-import com.example.weatheralertapp.com.example.weatheralertapp.AlertItem
-import com.example.weatheralertapp.com.example.weatheralertapp.WeatherService
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 import android.Manifest
+import com.example.weatheralertapp.com.example.weatheralertapp.AlertItem
 import com.example.weatheralertapp.com.example.weatheralertapp.GeoJsonLocation
+import com.example.weatheralertapp.com.example.weatheralertapp.WeatherService
 
 // A class for performing background tasks to fetch and notify weather alerts
 class WeatherAlertWorker(
@@ -198,13 +198,23 @@ class WeatherAlertWorker(
                                     "Polygon" -> {
                                         val coordinates = location.coordinates as? List<List<List<Double>>>
                                         coordinates?.let {
-                                            GeoUtils.isPolygonInRange(userLat, userLon, it, radiusKm.toDouble())
+                                            GeoUtils.isPolygonInRange(
+                                                userLat,
+                                                userLon,
+                                                it,
+                                                radiusKm.toDouble()
+                                            )
                                         } ?: false
                                     }
                                     "MultiPolygon" -> {
                                         val coordinates = location.coordinates as? List<List<List<List<Double>>>>
                                         coordinates?.any { polygon ->
-                                            GeoUtils.isPolygonInRange(userLat, userLon, polygon, radiusKm.toDouble())
+                                            GeoUtils.isPolygonInRange(
+                                                userLat,
+                                                userLon,
+                                                polygon,
+                                                radiusKm.toDouble()
+                                            )
                                         } ?: false
                                     }
                                     else -> false

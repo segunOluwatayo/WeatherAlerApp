@@ -18,18 +18,20 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
@@ -153,175 +155,241 @@ fun HomeContent(
     val locationState by viewModel.locationState.collectAsState()
     val weatherState by viewModel.weatherState.collectAsState()
     val savedLocations by viewModel.savedLocations.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
 
     var searchQuery by remember { mutableStateOf("") }
 
-    Box(
+    Column(
         modifier = modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        LazyColumn(
-            modifier = Modifier.padding(16.dp)
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight()
         ) {
-            item {
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    label = { Text("Search Location") },
-                    leadingIcon = {
-                        Icon(
-                            Icons.Default.Search,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 16.dp)
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Button(
-                        onClick = { viewModel.searchLocation(searchQuery) },
+            LazyColumn(
+                modifier = Modifier.padding(16.dp)
+            ) {
+                item {
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        label = { Text("Search Location") },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.Search,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        },
                         modifier = Modifier
-                            .weight(1f)
-                            .padding(end = 8.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary
+                            .fillMaxWidth()
+                            .padding(bottom = 16.dp),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(
+                            imeAction = ImeAction.Search
                         ),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Text("Search")
-                    }
-
-                    Button(
-                        onClick = { viewModel.saveCurrentLocation() },
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.tertiary,
-                            contentColor = MaterialTheme.colorScheme.onTertiary
+                        keyboardActions = KeyboardActions(
+                            onSearch = {
+                                if (searchQuery.isNotEmpty()) {
+                                    viewModel.searchLocation(searchQuery)
+                                }
+                            }
                         ),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Text("Save Location")
-                    }
-                }
-
-                // Current weather display card
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 16.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    elevation = CardDefaults.cardElevation(8.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surface
+                        enabled = !isLoading // Disable during loading
                     )
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text(
-                            text = "${weatherState.locationName}, ${weatherState.country}",
-                            style = MaterialTheme.typography.headlineSmall,
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
-
-                        Icon(
-                            painter = painterResource(id = getWeatherIcon(weatherState.weatherCode)),
-                            contentDescription = weatherState.weatherDescription,
-                            tint = Color.Unspecified,
-                            modifier = Modifier.size(96.dp)
-                        )
-
-                        Text(
-                            text = "${weatherState.temperature}°C",
-                            style = MaterialTheme.typography.displayLarge,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(vertical = 8.dp)
-                        )
-
-                        Text(
-                            text = weatherState.weatherDescription,
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-
-                        Divider(
-                            modifier = Modifier.padding(vertical = 16.dp),
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f),
-                            thickness = 1.dp
-                        )
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceEvenly
+                        Button(
+                            onClick = {
+                                if (searchQuery.isNotEmpty()) {
+                                    viewModel.searchLocation(searchQuery)
+                                }
+                            },
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(end = 8.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = MaterialTheme.colorScheme.onPrimary
+                            ),
+                            shape = RoundedCornerShape(8.dp),
+                            enabled = !isLoading
                         ) {
-                            WeatherDetailItem(
-                                icon = Icons.Rounded.WaterDrop,
-                                label = "Humidity",
-                                value = "${weatherState.humidity}%"
-                            )
-                            WeatherDetailItem(
-                                icon = Icons.Rounded.Air,
-                                label = "Wind",
-                                value = "${weatherState.windSpeed} km/h"
-                            )
-                            WeatherDetailItem(
-                                icon = Icons.Rounded.Speed,
-                                label = "Pressure",
-                                value = "${weatherState.pressure} hPa"
-                            )
+                            if (isLoading) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    color = MaterialTheme.colorScheme.onPrimary,
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Text("Search")
+                            }
                         }
 
-                        LocalSensorDisplay(weatherState = weatherState)
+                        Button(
+                            onClick = { viewModel.saveCurrentLocation() },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.tertiary,
+                                contentColor = MaterialTheme.colorScheme.onTertiary
+                            ),
+                            shape = RoundedCornerShape(8.dp),
+                            enabled = !isLoading
+                        ) {
+                            Text("Save Location")
+                        }
                     }
-                }
 
-                Button(
-                    onClick = {
-                        shareWeatherInfo(
-                            context,
-                            locationState,
-                            weatherState
+                    if (isLoading) {
+                        LoadingAnimation(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 32.dp)
+                                .wrapContentSize(Alignment.Center)
                         )
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 16.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.secondary,
-                        contentColor = MaterialTheme.colorScheme.onSecondary
-                    ),
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Icon(
-                        Icons.Default.Share,
-                        contentDescription = null,
-                        modifier = Modifier.padding(end = 8.dp)
+                    }
+
+                    // Current weather display card
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 16.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        elevation = CardDefaults.cardElevation(8.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surface
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = "${weatherState.locationName}, ${weatherState.country}",
+                                style = MaterialTheme.typography.headlineSmall,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
+
+                            Icon(
+                                painter = painterResource(id = getWeatherIcon(weatherState.weatherCode)),
+                                contentDescription = weatherState.weatherDescription,
+                                tint = Color.Unspecified,
+                                modifier = Modifier.size(96.dp)
+                            )
+
+                            Text(
+                                text = "${weatherState.temperature}°C",
+                                style = MaterialTheme.typography.displayLarge,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(vertical = 8.dp)
+                            )
+
+                            Text(
+                                text = weatherState.weatherDescription,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+
+                            Divider(
+                                modifier = Modifier.padding(vertical = 16.dp),
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f),
+                                thickness = 1.dp
+                            )
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceEvenly
+                            ) {
+                                WeatherDetailItem(
+                                    icon = Icons.Rounded.WaterDrop,
+                                    label = "Humidity",
+                                    value = "${weatherState.humidity}%"
+                                )
+                                WeatherDetailItem(
+                                    icon = Icons.Rounded.Air,
+                                    label = "Wind",
+                                    value = "${weatherState.windSpeed} km/h"
+                                )
+                                WeatherDetailItem(
+                                    icon = Icons.Rounded.Speed,
+                                    label = "Pressure",
+                                    value = "${weatherState.pressure} hPa"
+                                )
+                            }
+
+                            LocalSensorDisplay(weatherState = weatherState)
+                        }
+                    }
+
+                    Button(
+                        onClick = {
+                            shareWeatherInfo(
+                                context,
+                                locationState,
+                                weatherState
+                            )
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 16.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.secondary,
+                            contentColor = MaterialTheme.colorScheme.onSecondary
+                        ),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Share,
+                            contentDescription = null,
+                            modifier = Modifier.padding(end = 8.dp)
+                        )
+                        Text("Share Weather Info")
+                    }
+
+                    Text(
+                        text = "Saved Locations",
+                        style = MaterialTheme.typography.headlineSmall,
+                        modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
                     )
-                    Text("Share Weather Info")
                 }
 
-                Text(
-                    text = "Saved Locations",
-                    style = MaterialTheme.typography.headlineSmall,
-                    modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
-                )
-            }
-
-            items(savedLocations) { location ->
-                SavedLocationItem(location) {
-                    viewModel.setCurrentLocation(location)
+                items(savedLocations) { location ->
+                    SavedLocationItem(location) {
+                        viewModel.setCurrentLocation(location)
+                    }
                 }
             }
         }
+    }
+}
+
+// Loading animation composable.
+@Composable
+fun LoadingAnimation(
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        CircularProgressIndicator(
+            modifier = Modifier.size(48.dp),
+            color = MaterialTheme.colorScheme.primary,
+            strokeWidth = 4.dp
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "Searching location...",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.primary
+        )
     }
 }
 

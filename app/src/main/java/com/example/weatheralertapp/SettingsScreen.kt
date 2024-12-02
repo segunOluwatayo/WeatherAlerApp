@@ -14,7 +14,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationManagerCompat
-import androidx.lifecycle.viewmodel.compose.viewModel
 import android.Manifest
 import androidx.compose.foundation.clickable
 
@@ -75,137 +74,139 @@ fun SettingsContent(
             modifier = Modifier.padding(16.dp)
         )
 
-        // Scrollable content
-        LazyColumn(
+        // Wrap LazyColumn in Box with weight
+        Column(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .fillMaxHeight()
+                .fillMaxWidth()
         ) {
-            item {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                contentPadding = PaddingValues(vertical = 16.dp)
+            ) {
                 // Alert Types Card
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    elevation = CardDefaults.cardElevation(8.dp)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp)
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        elevation = CardDefaults.cardElevation(8.dp)
                     ) {
-                        Text(
-                            text = "Select Alerts to Receive",
-                            style = MaterialTheme.typography.headlineSmall,
-                            modifier = Modifier.padding(bottom = 16.dp)
-                        )
-
-                        val alertTypes = listOf(
-                            "Fires" to preferences.fires,
-                            "Wind" to preferences.wind,
-                            "Winter" to preferences.winter,
-                            "Thunderstorms" to preferences.thunderstorms,
-                            "Floods" to preferences.floods,
-                            "Temperature" to preferences.temperature,
-                            "Tropical" to preferences.tropical,
-                            "Marine" to preferences.marine,
-                            "Fog" to preferences.fog,
-                            "Tornado" to preferences.tornado,
-                        )
-
-                        alertTypes.forEach { (label, checked) ->
-                            CheckboxItem(
-                                label = label,
-                                checked = checked,
-                                onCheckedChange = {
-                                    when (label) {
-                                        "Fires" -> viewModel.updatePreferences(fires = it)
-                                        "Wind" -> viewModel.updatePreferences(wind = it)
-                                        "Winter" -> viewModel.updatePreferences(winter = it)
-                                        "Thunderstorms" -> viewModel.updatePreferences(thunderstorms = it)
-                                        "Floods" -> viewModel.updatePreferences(floods = it)
-                                        "Temperature" -> viewModel.updatePreferences(temperature = it)
-                                        "Tropical" -> viewModel.updatePreferences(tropical = it)
-                                        "Marine" -> viewModel.updatePreferences(marine = it)
-                                        "Fog" -> viewModel.updatePreferences(fog = it)
-                                        "Tornado" -> viewModel.updatePreferences(tornado = it)
-                                    }
-                                }
+                        Column(
+                            modifier = Modifier.padding(16.dp)
+                        ) {
+                            Text(
+                                text = "Select Alerts to Receive",
+                                style = MaterialTheme.typography.headlineSmall,
+                                modifier = Modifier.padding(bottom = 16.dp)
                             )
-                        }
-                    }
-                }
-            }
 
-            item {
-                // Notifications Card
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    elevation = CardDefaults.cardElevation(8.dp)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp)
-                    ) {
-                        Text(
-                            text = "Notifications",
-                            style = MaterialTheme.typography.headlineSmall,
-                            modifier = Modifier.padding(bottom = 16.dp)
-                        )
+                            val alertTypes = listOf(
+                                "Fires" to preferences.fires,
+                                "Wind" to preferences.wind,
+                                "Winter" to preferences.winter,
+                                "Thunderstorms" to preferences.thunderstorms,
+                                "Floods" to preferences.floods,
+                                "Temperature" to preferences.temperature,
+                                "Tropical" to preferences.tropical,
+                                "Marine" to preferences.marine,
+                                "Fog" to preferences.fog,
+                                "Tornado" to preferences.tornado
+                            )
 
-                        SwitchItem(
-                            checked = preferences.notificationsEnabled,
-                            onCheckedChange = { viewModel.updatePreferences(notificationsEnabled = it) }
-                        )
-                    }
-                }
-            }
-
-            // Theme Selection Card
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    elevation = CardDefaults.cardElevation(8.dp)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp)
-                    ) {
-                        Text(
-                            text = "Theme",
-                            style = MaterialTheme.typography.headlineSmall,
-                            modifier = Modifier.padding(bottom = 16.dp)
-                        )
-
-                        val themeOptions = listOf(
-                            ThemeMode.SYSTEM to "System Default",
-                            ThemeMode.LIGHT to "Light",
-                            ThemeMode.DARK to "Dark"
-                        )
-                        themeOptions.forEach { (mode, label) ->
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { viewModel.updatePreferences(themeMode = mode) }
-                                    .padding(vertical = 8.dp)
-                            ) {
-                                RadioButton(
-                                    selected = preferences.themeMode == mode,
-                                    onClick = { viewModel.updatePreferences(themeMode = mode) }
-                                )
-                                Text(
-                                    text = label,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    modifier = Modifier.padding(start = 16.dp)
+                            alertTypes.forEach { (label, checked) ->
+                                CheckboxItem(
+                                    label = label,
+                                    checked = checked,
+                                    onCheckedChange = {
+                                        when (label) {
+                                            "Fires" -> viewModel.updatePreferences(fires = it)
+                                            "Wind" -> viewModel.updatePreferences(wind = it)
+                                            "Winter" -> viewModel.updatePreferences(winter = it)
+                                            "Thunderstorms" -> viewModel.updatePreferences(thunderstorms = it)
+                                            "Floods" -> viewModel.updatePreferences(floods = it)
+                                            "Temperature" -> viewModel.updatePreferences(temperature = it)
+                                            "Tropical" -> viewModel.updatePreferences(tropical = it)
+                                            "Marine" -> viewModel.updatePreferences(marine = it)
+                                            "Fog" -> viewModel.updatePreferences(fog = it)
+                                            "Tornado" -> viewModel.updatePreferences(tornado = it)
+                                        }
+                                    }
                                 )
                             }
                         }
                     }
                 }
-            }
 
-            // Add some padding at the bottom
-            item {
-                Spacer(modifier = Modifier.height(16.dp))
+                // Notifications Card
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        elevation = CardDefaults.cardElevation(8.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp)
+                        ) {
+                            Text(
+                                text = "Notifications",
+                                style = MaterialTheme.typography.headlineSmall,
+                                modifier = Modifier.padding(bottom = 16.dp)
+                            )
+
+                            SwitchItem(
+                                checked = preferences.notificationsEnabled,
+                                onCheckedChange = { viewModel.updatePreferences(notificationsEnabled = it) }
+                            )
+                        }
+                    }
+                }
+
+                // Theme Selection Card
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        elevation = CardDefaults.cardElevation(8.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp)
+                        ) {
+                            Text(
+                                text = "Theme",
+                                style = MaterialTheme.typography.headlineSmall,
+                                modifier = Modifier.padding(bottom = 16.dp)
+                            )
+
+                            val themeOptions = listOf(
+                                ThemeMode.SYSTEM to "System Default",
+                                ThemeMode.LIGHT to "Light",
+                                ThemeMode.DARK to "Dark"
+                            )
+                            themeOptions.forEach { (mode, label) ->
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { viewModel.updatePreferences(themeMode = mode) }
+                                        .padding(vertical = 8.dp)
+                                ) {
+                                    RadioButton(
+                                        selected = preferences.themeMode == mode,
+                                        onClick = { viewModel.updatePreferences(themeMode = mode) }
+                                    )
+                                    Text(
+                                        text = label,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        modifier = Modifier.padding(start = 16.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
