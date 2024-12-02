@@ -25,6 +25,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.util.*
 import com.example.weatheralertapp.com.example.weatheralertapp.WeatherCodeUtil
 import com.example.weatheralertapp.com.example.weatheralertapp.WeatherService
+import kotlinx.coroutines.delay
 
 
 // Data class for representing the state of the location
@@ -502,6 +503,7 @@ private fun handlePressureReading(pressure: Float) {
             try {
                 // Fetch the latest location and weather data
                 fetchLocation(context)
+                delay(1000)
             } catch (e: Exception) {
                 // Handle any errors if necessary
                 println("Error refreshing data: ${e.message}")

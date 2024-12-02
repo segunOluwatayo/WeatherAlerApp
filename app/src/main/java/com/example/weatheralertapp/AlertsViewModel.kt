@@ -178,6 +178,7 @@ class AlertsViewModel(application: Application) : AndroidViewModel(application) 
                 if (currentLocation.latitude != 0.0 && currentLocation.longitude != 0.0) {
                     fetchAlertsForLocation(currentLocation.latitude, currentLocation.longitude)
                 }
+                delay(500)
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = "Error refreshing alerts: ${e.message}") }
             } finally {
