@@ -1,4 +1,4 @@
-// File: UserPreferences.kt
+
 package com.example.weatheralertapp
 
 import androidx.room.Entity
