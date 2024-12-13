@@ -1,7 +1,9 @@
-package com.example.weatheralertapp
+package com.example.weatheralertapp.worker
 
 import android.content.Context
-import com.example.weatheralertapp.com.example.weatheralertapp.Event
+import com.example.weatheralertapp.weatherapi.Event
+import com.example.weatheralertapp.database.AppDatabase
+import com.example.weatheralertapp.database.UserPreferences
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

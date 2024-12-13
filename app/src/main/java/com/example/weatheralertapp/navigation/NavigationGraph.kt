@@ -1,10 +1,14 @@
-package com.example.weatheralertapp
+package com.example.weatheralertapp.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import com.example.weatheralertapp.alerts.AlertsScreen
+import com.example.weatheralertapp.home.HomeScreen
+import com.example.weatheralertapp.settings.SettingsScreen
+import com.example.weatheralertapp.settings.SettingsViewModel
 
 @Composable
 fun NavigationGraph(

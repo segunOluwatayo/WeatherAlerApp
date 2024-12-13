@@ -1,8 +1,9 @@
-package com.example.weatheralertapp
+package com.example.weatheralertapp.data
 
 import android.app.Application
 import androidx.work.Configuration
 import androidx.work.WorkManager
+import com.example.weatheralertapp.worker.WeatherAlertWorker
 
 class WeatherApplication : Application() {
     override fun onCreate() {

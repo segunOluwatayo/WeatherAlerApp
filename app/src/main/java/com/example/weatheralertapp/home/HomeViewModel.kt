@@ -1,4 +1,4 @@
-package com.example.weatheralertapp
+package com.example.weatheralertapp.home
 
 import android.Manifest
 import android.annotation.SuppressLint
@@ -17,15 +17,20 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.work.WorkManager
 import androidx.work.await
+import com.example.weatheralertapp.R
+import com.example.weatheralertapp.worker.WeatherAlertWorker
 import com.google.android.gms.location.LocationServices
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.*
-import com.example.weatheralertapp.com.example.weatheralertapp.WeatherCodeUtil
-import com.example.weatheralertapp.com.example.weatheralertapp.WeatherService
+import com.example.weatheralertapp.weatherapi.WeatherCodeUtil
+import com.example.weatheralertapp.weatherapi.WeatherService
+import com.example.weatheralertapp.weatherapi.Constants
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 
 
 // Data class for representing the state of the location
@@ -180,26 +185,28 @@ class HomeViewModel(application: Application) : AndroidViewModel(application), S
     }
 
     override fun onSensorChanged(event: SensorEvent?) {
-//        event?.let {
-//            when (it.sensor.type) {
-//                Sensor.TYPE_PRESSURE -> handlePressureReading(it.values[0])
-//                Sensor.TYPE_AMBIENT_TEMPERATURE -> handleTemperatureReading(it.values[0])
-//                Sensor.TYPE_RELATIVE_HUMIDITY -> handleHumidityReading(it.values[0])
-//            }
-//        }
-        if (event != null) {
-            when (event.sensor.type) {
-                Sensor.TYPE_PRESSURE -> {
-//                    println("Pressure sensor reading: ${event.values[0]}") // Debug log
-                    handlePressureReading(event.values[0])
-                }
-                Sensor.TYPE_AMBIENT_TEMPERATURE -> {
-                    println("Temperature sensor reading: ${event.values[0]}") // Debug log
-                    handleTemperatureReading(event.values[0])
-                }
-                Sensor.TYPE_RELATIVE_HUMIDITY -> {
-                    println("Humidity sensor reading: ${event.values[0]}") // Debug log
-                    handleHumidityReading(event.values[0])
+        viewModelScope.launch(Dispatchers.Default) {  // Process sensor data on background thread
+            event?.let { sensorEvent ->
+                val sensorValue = sensorEvent.values[0]
+
+                when (sensorEvent.sensor.type) {
+                    Sensor.TYPE_PRESSURE -> {
+                        withContext(Dispatchers.Main) {
+                            handlePressureReading(sensorValue)
+                        }
+                    }
+                    Sensor.TYPE_AMBIENT_TEMPERATURE -> {
+                        println("Temperature sensor reading: $sensorValue") // Debug log
+                        withContext(Dispatchers.Main) {
+                            handleTemperatureReading(sensorValue)
+                        }
+                    }
+                    Sensor.TYPE_RELATIVE_HUMIDITY -> {
+                        println("Humidity sensor reading: $sensorValue") // Debug log
+                        withContext(Dispatchers.Main) {
+                            handleHumidityReading(sensorValue)
+                        }
+                    }
                 }
             }
         }
@@ -503,7 +510,7 @@ private fun handlePressureReading(pressure: Float) {
             try {
                 // Fetch the latest location and weather data
                 fetchLocation(context)
-                delay(1000)
+                delay(500)
             } catch (e: Exception) {
                 // Handle any errors if necessary
                 println("Error refreshing data: ${e.message}")

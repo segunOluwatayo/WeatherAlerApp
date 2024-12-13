@@ -1,4 +1,4 @@
-package com.example.weatheralertapp
+package com.example.weatheralertapp.data
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -10,10 +10,18 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.weatheralertapp.theme.AppTheme
+import com.example.weatheralertapp.navigation.NavigationGraph
+import com.example.weatheralertapp.navigation.Screen
+import com.example.weatheralertapp.settings.SettingsViewModel
+import com.example.weatheralertapp.worker.WeatherAlertWorker
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.util.Locale
 
 class MainActivity : ComponentActivity() {
@@ -26,8 +34,10 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         println("MainActivity: Starting weather alert worker")
-        WeatherAlertWorker.startImmediateCheck(this)
-        WeatherAlertWorker.startPeriodicChecks(this)
+        lifecycleScope.launch(Dispatchers.Default) {
+            WeatherAlertWorker.startImmediateCheck(this@MainActivity)
+            WeatherAlertWorker.startPeriodicChecks(this@MainActivity)
+        }
 
         setContent {
             val settingsViewModel: SettingsViewModel = viewModel()

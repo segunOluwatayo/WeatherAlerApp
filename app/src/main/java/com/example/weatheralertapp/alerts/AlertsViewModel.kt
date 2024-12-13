@@ -1,4 +1,4 @@
-package com.example.weatheralertapp
+package com.example.weatheralertapp.alerts
 
 import android.Manifest
 import android.annotation.SuppressLint
@@ -14,9 +14,12 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.weatheralertapp.com.example.weatheralertapp.AlertItem
-import com.example.weatheralertapp.com.example.weatheralertapp.GeoJsonLocation
-import com.example.weatheralertapp.com.example.weatheralertapp.WeatherService
+import com.example.weatheralertapp.home.LocationState
+import com.example.weatheralertapp.R
+import com.example.weatheralertapp.weatherapi.AlertItem
+import com.example.weatheralertapp.weatherapi.GeoJsonLocation
+import com.example.weatheralertapp.weatherapi.WeatherService
+import com.example.weatheralertapp.weatherapi.Constants
 import com.google.android.gms.location.LocationServices
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
@@ -27,6 +30,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.util.LinkedList
 import java.util.Locale
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import kotlin.math.atan2
@@ -217,8 +221,9 @@ class AlertsViewModel(application: Application) : AndroidViewModel(application) 
 
     // Update the location state with new latitude and longitude
     private fun updateLocationState(latitude: Double, longitude: Double) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
+                // Geocoding operations on IO thread
                 val addresses = geocoder.getFromLocation(latitude, longitude, 1)
                 val cityName = addresses?.firstOrNull()?.locality ?: ""
                 val country = addresses?.firstOrNull()?.countryName ?: ""
@@ -231,11 +236,19 @@ class AlertsViewModel(application: Application) : AndroidViewModel(application) 
                     formattedLocation = "$latitude,$longitude"
                 )
 
-                _uiState.update { it.copy(currentLocation = newLocation) }
+                // Switch to Main thread for UI updates
+                withContext(Dispatchers.Main) {
+                    _uiState.update { it.copy(currentLocation = newLocation) }
+                }
+
+                // Stay on IO thread for network call
                 fetchAlertsForLocation(latitude, longitude)
             } catch (e: Exception) {
-                _uiState.update {
-                    it.copy(error = "Failed to update location: ${e.message}", isLoading = false)
+                // Switch to Main thread for error UI update
+                withContext(Dispatchers.Main) {
+                    _uiState.update {
+                        it.copy(error = "Failed to update location: ${e.message}", isLoading = false)
+                    }
                 }
             }
         }

@@ -1,4 +1,4 @@
-package com.example.weatheralertapp
+package com.example.weatheralertapp.weatherapi
 
 object Constants {
     const val TOMORROW_API_KEY = "AFlakHN7Q8cwTJNX7wqFQbMDIdZEiOH9"

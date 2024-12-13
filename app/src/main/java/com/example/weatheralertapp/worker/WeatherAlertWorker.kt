@@ -1,4 +1,4 @@
-package com.example.weatheralertapp
+package com.example.weatheralertapp.worker
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -16,9 +16,12 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 import android.Manifest
-import com.example.weatheralertapp.com.example.weatheralertapp.AlertItem
-import com.example.weatheralertapp.com.example.weatheralertapp.GeoJsonLocation
-import com.example.weatheralertapp.com.example.weatheralertapp.WeatherService
+import com.example.weatheralertapp.data.MainActivity
+import com.example.weatheralertapp.R
+import com.example.weatheralertapp.weatherapi.AlertItem
+import com.example.weatheralertapp.weatherapi.GeoJsonLocation
+import com.example.weatheralertapp.weatherapi.WeatherService
+import com.example.weatheralertapp.weatherapi.Constants
 
 // A class for performing background tasks to fetch and notify weather alerts
 class WeatherAlertWorker(

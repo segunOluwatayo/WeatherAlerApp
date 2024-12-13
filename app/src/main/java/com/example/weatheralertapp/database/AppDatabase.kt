@@ -1,5 +1,5 @@
 // File: AppDatabase.kt
-package com.example.weatheralertapp
+package com.example.weatheralertapp.database
 
 import androidx.room.Database
 import androidx.room.RoomDatabase

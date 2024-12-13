@@ -1,5 +1,5 @@
 
-package com.example.weatheralertapp
+package com.example.weatheralertapp.theme
 
 enum class ThemeMode {
     SYSTEM,

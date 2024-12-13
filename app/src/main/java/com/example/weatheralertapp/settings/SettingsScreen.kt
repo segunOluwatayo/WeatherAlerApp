@@ -1,4 +1,4 @@
-package com.example.weatheralertapp
+package com.example.weatheralertapp.settings
 
 import android.content.Context
 import android.content.pm.PackageManager
@@ -16,6 +16,8 @@ import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationManagerCompat
 import android.Manifest
 import androidx.compose.foundation.clickable
+import com.example.weatheralertapp.theme.ThemeMode
+import com.example.weatheralertapp.database.UserPreferences
 
 @Composable
 fun SettingsScreen(

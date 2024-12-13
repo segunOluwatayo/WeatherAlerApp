@@ -1,10 +1,9 @@
 
-package com.example.weatheralertapp.com.example.weatheralertapp
+package com.example.weatheralertapp.weatherapi
 
 
 
 import android.annotation.SuppressLint
-import com.example.weatheralertapp.Constants
 import retrofit2.http.GET
 import retrofit2.http.Query
 

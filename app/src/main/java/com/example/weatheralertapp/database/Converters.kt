@@ -1,7 +1,8 @@
 
-package com.example.weatheralertapp
+package com.example.weatheralertapp.database
 
 import androidx.room.TypeConverter
+import com.example.weatheralertapp.theme.ThemeMode
 
 class Converters {
     @TypeConverter

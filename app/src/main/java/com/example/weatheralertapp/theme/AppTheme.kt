@@ -1,4 +1,4 @@
-package com.example.weatheralertapp
+package com.example.weatheralertapp.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
@@ -8,6 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
+import com.example.weatheralertapp.settings.SettingsViewModel
 import com.example.weatheralertapp.ui.theme.DarkColorScheme
 import com.example.weatheralertapp.ui.theme.LightColorScheme
 import com.example.weatheralertapp.ui.theme.Typography

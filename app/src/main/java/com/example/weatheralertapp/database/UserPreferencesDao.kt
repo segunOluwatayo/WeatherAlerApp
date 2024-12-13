@@ -1,5 +1,5 @@
 
-package com.example.weatheralertapp
+package com.example.weatheralertapp.database
 
 import androidx.room.Dao
 import androidx.room.Insert

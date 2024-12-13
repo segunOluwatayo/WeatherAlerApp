@@ -1,8 +1,9 @@
 
-package com.example.weatheralertapp
+package com.example.weatheralertapp.database
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import com.example.weatheralertapp.theme.ThemeMode
 
 @Entity(tableName = "user_preferences")
 data class UserPreferences(
