@@ -721,13 +721,28 @@ fun shareWeatherInfo(
 @DrawableRes
 fun getWeatherIcon(weatherCode: Int): Int {
     return when (weatherCode) {
-        1000 -> R.drawable.ic_sunny
-        1001 -> R.drawable.ic_cloudy
-        1002 -> R.drawable.ic_rainy
-        1003 -> R.drawable.ic_drizzle
-        1004 -> R.drawable.ic_thunderstorm
-        1005 -> R.drawable.ic_snow
-        1006 -> R.drawable.ic_mist
+        // Clear conditions
+        1000, 1100 -> R.drawable.ic_sunny  // Clear, Mostly Clear
+
+        // Cloudy conditions
+        1001, 1101, 1102 -> R.drawable.ic_cloudy  // Cloudy, Partly Cloudy
+
+        // Rain conditions
+        1002, 1192, 1195, 1201, 1180, 1181, 1186, 1189, 1187, 1183, 1198 -> R.drawable.ic_rainy  // Light/Moderate/Heavy Rain
+
+        // Drizzle conditions
+        1003, 1150, 1153, 1168, 1171 -> R.drawable.ic_drizzle  // Light/Moderate/Heavy Drizzle
+
+        // Thunderstorm conditions
+        1004, 1087, 1273, 1276, 1279, 1282 -> R.drawable.ic_thunderstorm  // Thunderstorm, Thunder
+
+        // Snow conditions
+        1005, 1210, 1213, 1216, 1219, 1222, 1225, 1255, 1258 -> R.drawable.ic_snow  // Light/Moderate/Heavy Snow
+
+        // Mist/Fog conditions
+        1006, 1030, 1135, 1147 -> R.drawable.ic_mist  // Mist, Fog, Freezing Fog
+
+        // Default for unknown conditions
         else -> R.drawable.ic_unknown
     }
 }
