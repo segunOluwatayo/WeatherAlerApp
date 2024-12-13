@@ -6,6 +6,8 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -59,44 +61,44 @@ class MainActivity : ComponentActivity() {
     }
 
         @Composable
-    fun BottomNavigationBar(navController: NavHostController) {
-        val items = listOf(
-            Screen.Home,
-            Screen.Alerts,
-            Screen.Settings
-        )
-        NavigationBar {
-            val currentRoute = currentRoute(navController)
+        fun BottomNavigationBar(navController: NavHostController) {
+            val items = listOf(
+                Screen.Home to Icons.Default.Home,
+                Screen.Alerts to Icons.Default.Warning,
+                Screen.Settings to Icons.Default.Settings
+            )
+            NavigationBar {
+                val currentRoute = currentRoute(navController)
 
-            items.forEach { screen ->
-                NavigationBarItem(
-                    icon = {
-                        Icon(
-                            imageVector = Icons.Default.Home,
-                            contentDescription = screen.route
-                        )
-                    },
-                    label = {
-                        Text(screen.route.replaceFirstChar {
-                            if (it.isLowerCase()) it.titlecase(
-                                Locale.ROOT
-                            ) else it.toString()
-                        })
-                    },
-                    selected = currentRoute == screen.route,
-                    onClick = {
-                        navController.navigate(screen.route) {
-                            popUpTo(navController.graph.startDestinationId) {
-                                saveState = true
+                items.forEach { (screen, icon) ->
+                    NavigationBarItem(
+                        icon = {
+                            Icon(
+                                imageVector = icon,
+                                contentDescription = screen.route
+                            )
+                        },
+                        label = {
+                            Text(screen.route.replaceFirstChar {
+                                if (it.isLowerCase()) it.titlecase(
+                                    Locale.ROOT
+                                ) else it.toString()
+                            })
+                        },
+                        selected = currentRoute == screen.route,
+                        onClick = {
+                            navController.navigate(screen.route) {
+                                popUpTo(navController.graph.startDestinationId) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
                             }
-                            launchSingleTop = true
-                            restoreState = true
                         }
-                    }
-                )
+                    )
+                }
             }
         }
-    }
 
     @Composable
     fun currentRoute(navController: NavHostController): String? {
