@@ -225,8 +225,22 @@ class AlertsViewModel(application: Application) : AndroidViewModel(application) 
             try {
                 // Geocoding operations on IO thread
                 val addresses = geocoder.getFromLocation(latitude, longitude, 1)
-                val cityName = addresses?.firstOrNull()?.locality ?: ""
-                val country = addresses?.firstOrNull()?.countryName ?: ""
+                val address = addresses?.firstOrNull()
+
+                // A more detailed location name
+                val locationParts = listOfNotNull(
+                    address?.subLocality,
+                    address?.locality,
+                    address?.adminArea,
+                    address?.countryName
+                ).distinct()
+
+                val cityName = when {
+                    locationParts.isEmpty() -> "$latitude,$longitude"
+                    else -> locationParts.take(2).joinToString(", ")
+                }
+
+                val country = address?.countryName ?: ""
 
                 val newLocation = LocationState(
                     latitude = latitude,
