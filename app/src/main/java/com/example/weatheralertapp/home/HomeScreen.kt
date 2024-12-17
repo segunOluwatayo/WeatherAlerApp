@@ -46,7 +46,6 @@ import java.util.Date
 import java.util.Locale
 import kotlin.math.roundToInt
 
-
 // Main composable screen for the weather application.
 // Handles location permissions, weather display, and user interactions.
 @OptIn(ExperimentalMaterial3Api::class)
@@ -150,7 +149,7 @@ fun HomeScreen() {
     )
 }
 
- // Main weather content wrapper composable.
+// Main weather content wrapper composable.
 // Delegates to HomeContent with required context and modifiers.
 @Composable
 fun WeatherContent(viewModel: HomeViewModel, modifier: Modifier = Modifier) {
@@ -159,7 +158,6 @@ fun WeatherContent(viewModel: HomeViewModel, modifier: Modifier = Modifier) {
 
 // Primary content composable for the home screen.
 // Displays weather information, search functionality, and saved locations.
-
 @Composable
 fun HomeContent(
     viewModel: HomeViewModel,
@@ -170,7 +168,7 @@ fun HomeContent(
     val weatherState by viewModel.weatherState.collectAsState()
     val savedLocations by viewModel.savedLocations.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
-
+    val isRefreshing by viewModel.isRefreshing.collectAsState()
     var searchQuery by remember { mutableStateOf("") }
 
     Column(
@@ -212,7 +210,7 @@ fun HomeContent(
                                 }
                             }
                         ),
-                        enabled = !isLoading // Disable during loading
+                        enabled = !isLoading && !isRefreshing
                     )
 
                     Row(
@@ -233,17 +231,9 @@ fun HomeContent(
                                 contentColor = MaterialTheme.colorScheme.onPrimary
                             ),
                             shape = RoundedCornerShape(8.dp),
-                            enabled = !isLoading
+                            enabled = !isLoading && !isRefreshing
                         ) {
-                            if (isLoading) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(20.dp),
-                                    color = MaterialTheme.colorScheme.onPrimary,
-                                    strokeWidth = 2.dp
-                                )
-                            } else {
-                                Text("Search")
-                            }
+                            Text("Search")
                         }
 
                         Button(
@@ -254,129 +244,152 @@ fun HomeContent(
                                 contentColor = MaterialTheme.colorScheme.onTertiary
                             ),
                             shape = RoundedCornerShape(8.dp),
-                            enabled = !isLoading
+                            enabled = !isLoading && !isRefreshing
                         ) {
                             Text("Save Location")
                         }
                     }
 
-                    if (isLoading) {
-                        LoadingAnimation(
+                    // Show loading indicator when searching or refreshing
+                    if (isLoading || isRefreshing) {
+                        Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 32.dp)
-                                .wrapContentSize(Alignment.Center)
-                        )
-                    }
-
-                    // Current weather display card
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 16.dp),
-                        shape = RoundedCornerShape(16.dp),
-                        elevation = CardDefaults.cardElevation(8.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surface
-                        )
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
+                                .padding(vertical = 32.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Text(
-                                text = "${weatherState.locationName}, ${weatherState.country}",
-                                style = MaterialTheme.typography.headlineSmall,
-                                modifier = Modifier.padding(bottom = 8.dp)
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(48.dp),
+                                color = MaterialTheme.colorScheme.primary,
+                                strokeWidth = 4.dp
                             )
-
-                            Icon(
-                                painter = painterResource(id = getWeatherIcon(weatherState.weatherCode)),
-                                contentDescription = weatherState.weatherDescription,
-                                tint = Color.Unspecified,
-                                modifier = Modifier.size(96.dp)
-                            )
-
+                            Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = "${weatherState.temperature}°C",
-                                style = MaterialTheme.typography.displayLarge,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(vertical = 8.dp)
-                            )
-
-                            Text(
-                                text = weatherState.weatherDescription,
-                                style = MaterialTheme.typography.titleMedium,
+                                text = if (isLoading) "Searching location..." else "Refreshing data...",
+                                style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.primary
                             )
-
-                            Divider(
-                                modifier = Modifier.padding(vertical = 16.dp),
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f),
-                                thickness = 1.dp
-                            )
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceEvenly
-                            ) {
-                                WeatherDetailItem(
-                                    icon = Icons.Rounded.WaterDrop,
-                                    label = "Humidity",
-                                    value = "${weatherState.humidity}%"
-                                )
-                                WeatherDetailItem(
-                                    icon = Icons.Rounded.Air,
-                                    label = "Wind",
-                                    value = "${weatherState.windSpeed} km/h"
-                                )
-                                WeatherDetailItem(
-                                    icon = Icons.Rounded.Speed,
-                                    label = "Pressure",
-                                    value = "${weatherState.pressure} hPa"
-                                )
-                            }
-
-                            LocalSensorDisplay(weatherState = weatherState)
                         }
                     }
 
-                    Button(
-                        onClick = {
-                            shareWeatherInfo(
-                                context,
-                                locationState,
-                                weatherState
+                    // Current weather display card (only show if not loading or refreshing)
+                    if (!isLoading && !isRefreshing) {
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 16.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            elevation = CardDefaults.cardElevation(8.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surface
                             )
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 16.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.secondary,
-                            contentColor = MaterialTheme.colorScheme.onSecondary
-                        ),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.Share,
-                            contentDescription = null,
-                            modifier = Modifier.padding(end = 8.dp)
-                        )
-                        Text("Share Weather Info")
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(16.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    text = "${weatherState.locationName}, ${weatherState.country}",
+                                    style = MaterialTheme.typography.headlineSmall,
+                                    modifier = Modifier.padding(bottom = 8.dp)
+                                )
+
+                                Icon(
+                                    painter = painterResource(id = getWeatherIcon(weatherState.weatherCode)),
+                                    contentDescription = weatherState.weatherDescription,
+                                    tint = Color.Unspecified,
+                                    modifier = Modifier.size(96.dp)
+                                )
+
+                                Text(
+                                    text = "${weatherState.temperature}°C",
+                                    style = MaterialTheme.typography.displayLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(vertical = 8.dp)
+                                )
+
+                                Text(
+                                    text = weatherState.weatherDescription,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+
+                                Divider(
+                                    modifier = Modifier.padding(vertical = 16.dp),
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f),
+                                    thickness = 1.dp
+                                )
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceEvenly
+                                ) {
+                                    WeatherDetailItem(
+                                        icon = Icons.Rounded.WaterDrop,
+                                        label = "Humidity",
+                                        value = "${weatherState.humidity}%"
+                                    )
+                                    WeatherDetailItem(
+                                        icon = Icons.Rounded.Air,
+                                        label = "Wind",
+                                        value = "${weatherState.windSpeed} km/h"
+                                    )
+                                    WeatherDetailItem(
+                                        icon = Icons.Rounded.Speed,
+                                        label = "Pressure",
+                                        value = "${weatherState.pressure} hPa"
+                                    )
+                                }
+
+                                LocalSensorDisplay(weatherState = weatherState)
+                            }
+                        }
                     }
 
-                    Text(
-                        text = "Saved Locations",
-                        style = MaterialTheme.typography.headlineSmall,
-                        modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
-                    )
+                    if (!isLoading && !isRefreshing) {
+                        Button(
+                            onClick = {
+                                shareWeatherInfo(
+                                    context,
+                                    locationState,
+                                    weatherState
+                                )
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 16.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.secondary,
+                                contentColor = MaterialTheme.colorScheme.onSecondary
+                            ),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Share,
+                                contentDescription = null,
+                                modifier = Modifier.padding(end = 8.dp)
+                            )
+                            Text("Share Weather Info")
+                        }
+                    }
+
+                    if (!isLoading && !isRefreshing) {
+                        Text(
+                            text = "Saved Locations",
+                            style = MaterialTheme.typography.headlineSmall,
+                            modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
+                        )
+                    }
                 }
 
                 items(savedLocations) { location ->
-                    SavedLocationItem(location) {
-                        viewModel.setCurrentLocation(location)
-                    }
+                    SavedLocationItem(
+                        location = location,
+                        onClick = { viewModel.setCurrentLocation(location) },
+                        onDelete = { locationToDelete ->
+                            viewModel.deleteLocation(locationToDelete)
+                        }
+                    )
                 }
             }
         }
@@ -524,7 +537,8 @@ private fun getPressureTrendText(trend: PressureTrend): String {
         PressureTrend.FALLING -> "Falling"
         PressureTrend.STABLE -> "Stable"
         PressureTrend.RISING -> "Rising"
-        PressureTrend.RISING_FAST -> "Rapidly Rising"}
+        PressureTrend.RISING_FAST -> "Rapidly Rising"
+    }
 }
 
 // Provides weather prediction based on pressure and trend.
@@ -572,9 +586,9 @@ fun WeatherDetailItem(icon: ImageVector, label: String, value: String) {
     }
 }
 
-// Displays a saved location item with click handling.
+// Displays a saved location item with click handling and delete functionality.
 @Composable
-fun SavedLocationItem(location: LocationState, onClick: () -> Unit) {
+fun SavedLocationItem(location: LocationState, onClick: () -> Unit, onDelete: (LocationState) -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -587,20 +601,32 @@ fun SavedLocationItem(location: LocationState, onClick: () -> Unit) {
         )
     ) {
         Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Icon(
-                Icons.Default.Place,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(32.dp)
-            )
-            Spacer(modifier = Modifier.width(16.dp))
-            Text(
-                text = "${location.cityName}, ${location.country}",
-                style = MaterialTheme.typography.titleMedium
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Default.Place,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(32.dp)
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+                Text(
+                    text = "${location.cityName}, ${location.country}",
+                    style = MaterialTheme.typography.titleMedium
+                )
+            }
+            IconButton(onClick = { onDelete(location) }) {
+                Icon(
+                    Icons.Default.Delete,
+                    contentDescription = "Delete",
+                    tint = MaterialTheme.colorScheme.onSurface
+                )
+            }
         }
     }
 }

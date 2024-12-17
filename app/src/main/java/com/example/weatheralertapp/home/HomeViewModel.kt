@@ -10,6 +10,7 @@ import android.content.pm.PackageManager
 import android.hardware.*
 import android.location.Geocoder
 import android.os.Build
+import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -28,10 +29,11 @@ import java.util.*
 import com.example.weatheralertapp.weatherapi.WeatherCodeUtil
 import com.example.weatheralertapp.weatherapi.WeatherService
 import com.example.weatheralertapp.weatherapi.Constants
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
-
 
 // Data class for representing the state of the location
 data class LocationState(
@@ -112,8 +114,11 @@ class HomeViewModel(application: Application) : AndroidViewModel(application), S
     private val pressureReadings = mutableListOf<PressureReading>()
     private data class PressureReading(val value: Float, val timestamp: Long)
 
+    private val gson = Gson()
+
     init {
         initializeSensors()
+        loadLocationsFromPrefs()
     }
 
     private fun initializeSensors() {
@@ -213,51 +218,22 @@ class HomeViewModel(application: Application) : AndroidViewModel(application), S
     }
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
-        // does nothing
+        // Do nothing
     }
 
-//    private fun handlePressureReading(pressure: Float) {
-//        val currentTime = System.currentTimeMillis()
-//
-//        // Add to pressure readings history
-//        pressureReadings.add(PressureReading(pressure, currentTime))
-//        if (pressureReadings.size > 12) { // Keep last hour (5-minute intervals)
-//            pressureReadings.removeAt(0)
-//        }
-//
-//        // Calculate trend and check for significant changes
-//        val trend = calculatePressureTrend()
-//        if (trend == PressureTrend.FALLING_FAST || trend == PressureTrend.RISING_FAST) {
-//            val pressureChange = if (pressureReadings.size > 1) {
-//                pressure - pressureReadings.first().value
-//            } else 0f
-//            triggerPressureAlert(pressureChange)
-//        }
-//
-//        // Update weather state
-//        _weatherState.update { current ->
-//            current.copy(
-//                localSensorData = current.localSensorData.copy(
-//                    pressure = pressure,
-//                    pressureTrend = trend,
-//                    lastUpdated = currentTime
-//                )
-//            )
-//        }
-//    }
-private fun handlePressureReading(pressure: Float) {
-    _weatherState.update { current ->
-        current.copy(
-            localSensorData = current.localSensorData.copy(
-                pressure = pressure,
-                pressureTrend = calculatePressureTrend(),
-                lastUpdated = System.currentTimeMillis(),
-                hasPressure = true,
-                isAvailable = true
+    private fun handlePressureReading(pressure: Float) {
+        _weatherState.update { current ->
+            current.copy(
+                localSensorData = current.localSensorData.copy(
+                    pressure = pressure,
+                    pressureTrend = calculatePressureTrend(),
+                    lastUpdated = System.currentTimeMillis(),
+                    hasPressure = true,
+                    isAvailable = true
+                )
             )
-        )
+        }
     }
-}
 
     private fun handleTemperatureReading(temperature: Float) {
         _weatherState.update { current ->
@@ -271,7 +247,6 @@ private fun handlePressureReading(pressure: Float) {
             )
         }
     }
-
 
     private fun handleHumidityReading(humidity: Float) {
         _weatherState.update { current ->
@@ -370,29 +345,6 @@ private fun handlePressureReading(pressure: Float) {
     }
 
     // Fetch weather data for the given location coordinates
-//    private fun fetchWeatherData(latitude: Double, longitude: Double) {
-//        viewModelScope.launch {
-//            try {
-//                val location = "$latitude,$longitude"
-//                val response = weatherService.getCurrentWeather(location = location)
-//
-//                // Update the weather state with API response
-//                _weatherState.value = WeatherState(
-//                    temperature = response.data.values.temperature.toInt(),
-//                    humidity = response.data.values.humidity,
-//                    windSpeed = response.data.values.windSpeed,
-//                    pressure = response.data.values.pressureSurfaceLevel,
-//                    precipitationProbability = response.data.values.precipitationProbability,
-//                    weatherCode = response.data.values.weatherCode,
-//                    weatherDescription = WeatherCodeUtil.getWeatherDescription(response.data.values.weatherCode),
-//                    locationName = _locationState.value.cityName,
-//                    country = _locationState.value.country
-//                )
-//            } catch (e: Exception) {
-//                println("Error fetching weather data: ${e.message}")
-//            }
-//        }
-//    }
     private fun fetchWeatherData(latitude: Double, longitude: Double) {
         viewModelScope.launch {
             try {
@@ -467,11 +419,48 @@ private fun handlePressureReading(pressure: Float) {
         notificationManager.notify(notificationId, notificationBuilder.build())
     }
 
-    // Save the current location to the list of saved locations
+    // Save the current location to the list of saved locations and update SharedPreferences
     fun saveCurrentLocation() {
         val currentLocation = _locationState.value
         if (currentLocation.latitude != 0.0 && currentLocation.longitude != 0.0) {
-            _savedLocations.value += currentLocation
+            if (!_savedLocations.value.any { it.formattedLocation == currentLocation.formattedLocation }) {
+                _savedLocations.value += currentLocation
+                saveLocationsToPrefs()
+            } else {
+                // Show a Toast message indicating that the location is already saved
+                Toast.makeText(
+                    getApplication(),
+                    "Location already saved",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
+    }
+
+    // Delete a location from the list of saved locations and update SharedPreferences
+    fun deleteLocation(location: LocationState) {
+        _savedLocations.value = _savedLocations.value.toMutableList().also {
+            it.remove(location)
+        }
+        saveLocationsToPrefs()
+    }
+
+    // Save locations to SharedPreferences
+    private fun saveLocationsToPrefs() {
+        val json = gson.toJson(_savedLocations.value)
+        getApplication<Application>().getSharedPreferences("weather_prefs", Context.MODE_PRIVATE)
+            .edit()
+            .putString("saved_locations", json)
+            .apply()
+    }
+
+    // Load locations from SharedPreferences
+    private fun loadLocationsFromPrefs() {
+        val prefs = getApplication<Application>().getSharedPreferences("weather_prefs", Context.MODE_PRIVATE)
+        val json = prefs.getString("saved_locations", null)
+        if (json != null) {
+            val type = object : TypeToken<List<LocationState>>() {}.type
+            _savedLocations.value = gson.fromJson(json, type)
         }
     }
 
